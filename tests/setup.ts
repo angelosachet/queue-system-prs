@@ -1,3 +1,4 @@
+// tests/setup.ts
 import { PrismaClient } from '@prisma/client';
 
 let prisma: PrismaClient;
@@ -9,10 +10,12 @@ beforeAll(async () => {
   (global as any).prisma = prisma;
 });
 
-afterEach(async () => {
-  // Limpa dados de todas as tabelas usadas nos testes
+beforeEach(async () => {
+  // Limpa tabelas na ordem correta para não quebrar FKs
+  await prisma.queue.deleteMany();
+  await prisma.player.updateMany({ data: { simulatorId: null } });
   await prisma.player.deleteMany();
-  // await prisma.user.deleteMany(); // se tiver auth
+  await prisma.simulator.deleteMany();
 });
 
 afterAll(async () => {
