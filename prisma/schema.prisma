@@ -1,0 +1,42 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_TEST")
+}
+
+model Player {
+  id          Int        @id @default(autoincrement())
+  name        String
+  inQueue     Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+
+  simulatorId Int?       
+  simulator   Simulator? @relation(fields: [simulatorId], references: [id])
+
+  Queues       Queue[]     // relação oposta com Queue
+}
+
+model Simulator {
+  id        Int        @id @default(autoincrement())
+  name      String
+  active    Boolean    @default(true)
+
+  Players   Player[]   // um simulador pode ter vários Players ao longo do tempo
+  Queue     Queue[]    // fila associada ao simulador
+}
+
+model Queue {
+  id          Int        @id @default(autoincrement())
+  PlayerId    Int
+  Player      Player     @relation(fields: [PlayerId], references: [id])
+
+  SimulatorId Int
+  Simulator   Simulator  @relation(fields: [SimulatorId], references: [id])
+
+  position    Int
+  createdAt   DateTime   @default(now())
+}
