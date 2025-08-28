@@ -1,0 +1,106 @@
+// service/queue.service.ts
+import { Queue, Player, Simulator } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+
+// usa global.prisma se existir
+const prismaClient = global.prisma ?? new PrismaClient();
+const prisma = prismaClient;
+
+
+export class QueueService {
+  async addPlayerToQueue(
+    playerId: number,
+    simulatorId: number
+  ): Promise<Queue & { Player: Player; Simulator: Simulator }> {
+    const player = await prismaClient.player.findUnique({ where: { id: playerId } });
+    const simulator = await prismaClient.simulator.findUnique({ where: { id: simulatorId } });
+
+    if (!player) throw new Error('Player not found');
+    if (!simulator) throw new Error('Simulator not found');
+
+    const count = await prismaClient.queue.count({ where: { SimulatorId: simulatorId } });
+
+    const queueItem = await prismaClient.queue.create({
+      data: {
+        PlayerId: playerId,
+        SimulatorId: simulatorId,
+        position: count + 1,
+      },
+      include: { Player: true, Simulator: true },
+    });
+
+    return queueItem;
+  }
+
+  async getQueue(simulatorId: number): Promise<(Queue & { Player: Player })[]> {
+    return prismaClient.queue.findMany({
+      where: { SimulatorId: simulatorId },
+      include: { Player: true },
+      orderBy: { position: 'asc' },
+    });
+  }
+
+  async removePlayerFromQueue(queueId: number): Promise<void> {
+    const queueItem = await prismaClient.queue.findUnique({ where: { id: queueId } });
+    if (!queueItem) throw new Error('Queue item not found');
+
+    const simulatorId = queueItem.SimulatorId;
+    const position = queueItem.position;
+
+    await prismaClient.$transaction([
+      prismaClient.queue.delete({ where: { id: queueId } }),
+      prismaClient.queue.updateMany({
+        where: { SimulatorId: simulatorId, position: { gt: position } },
+        data: { position: { decrement: 1 } },
+      }),
+    ]);
+  }
+
+  async movePlayer(queueId: number, newPosition: number): Promise<Queue & { Player: Player; Simulator: Simulator }> {
+    const queueItem = await prismaClient.queue.findUnique({ where: { id: queueId } });
+    if (!queueItem) throw new Error('Queue item not found');
+
+    const simulatorId = queueItem.SimulatorId;
+    const oldPosition = queueItem.position;
+
+    if (newPosition === oldPosition) {
+      const updated = await prismaClient.queue.findUnique({
+        where: { id: queueId },
+        include: { Player: true, Simulator: true },
+      });
+      if (!updated) throw new Error('Queue item not found after move');
+      return updated;
+    }
+
+    if (newPosition < oldPosition) {
+      await prismaClient.$transaction([
+        prismaClient.queue.updateMany({
+          where: { SimulatorId: simulatorId, position: { gte: newPosition, lt: oldPosition } },
+          data: { position: { increment: 1 } },
+        }),
+        prismaClient.queue.update({
+          where: { id: queueId },
+          data: { position: newPosition },
+        }),
+      ]);
+    } else {
+      await prismaClient.$transaction([
+        prismaClient.queue.updateMany({
+          where: { SimulatorId: simulatorId, position: { lte: newPosition, gt: oldPosition } },
+          data: { position: { decrement: 1 } },
+        }),
+        prismaClient.queue.update({
+          where: { id: queueId },
+          data: { position: newPosition },
+        }),
+      ]);
+    }
+
+    const updated = await prismaClient.queue.findUnique({
+      where: { id: queueId },
+      include: { Player: true, Simulator: true },
+    });
+    if (!updated) throw new Error('Queue item not found after move');
+    return updated;
+  }
+}
