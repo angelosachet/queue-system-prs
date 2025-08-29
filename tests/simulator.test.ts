@@ -16,9 +16,13 @@ describe('Simulator CRUD', () => {
     const res = await request(app).post('/simulators').send({ name: 'Simulator A' });
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('Simulator A');
+    expect(res.body.message).toBe('Simulator created with empty queue');
 
-    const simulators = await global.prisma.simulator.findMany();
+    const simulators = await global.prisma.simulator.findMany({
+      include: { Queue: true }
+    });
     expect(simulators.length).toBe(1);
+    expect(simulators[0].Queue.length).toBe(1);
   });
 
   it('should list simulators', async () => {

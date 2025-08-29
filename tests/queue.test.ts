@@ -17,8 +17,8 @@ describe('Queue CRUD', () => {
     const player1 = await global.prisma.player.create({ data: { name: 'Player1' } });
     const player2 = await global.prisma.player.create({ data: { name: 'Player2' } });
 
-    const res1 = await request(app).post('/queue').send({ PlayerId: player1.id, SimulatorId: simulator.id });
-    const res2 = await request(app).post('/queue').send({ PlayerId: player2.id, SimulatorId: simulator.id });
+    const res1 = await request(app).post('/queue').send({ playerId: player1.id, simulatorId: simulator.id });
+    const res2 = await request(app).post('/queue').send({ playerId: player2.id, simulatorId: simulator.id });
 
     expect(res1.status).toBe(201);
     expect(res1.body.position).toBe(1);

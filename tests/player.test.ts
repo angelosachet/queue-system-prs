@@ -16,6 +16,7 @@ describe('Player CRUD', () => {
     const res = await request(app).post('/players').send({ name: 'Maria' });
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('Maria');
+    expect(res.body.inQueue).toBe(true);
 
     const players = await global.prisma.player.findMany();
     expect(players.length).toBe(1);
