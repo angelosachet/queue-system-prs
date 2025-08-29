@@ -39,4 +39,23 @@ model Queue {
 
   position    Int
   createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  // Timed queue fields
+  status      QueueStatus @default(WAITING)
+  turnStartAt DateTime?
+  confirmedAt DateTime?
+  expiresAt   DateTime?
+  
+  // For re-queue tracking
+  missedTurns Int        @default(0)
+  totalWaitTime Int      @default(0) // in seconds
+}
+
+enum QueueStatus {
+  WAITING
+  ACTIVE
+  CONFIRMED
+  MISSED
+  COMPLETED
 }
