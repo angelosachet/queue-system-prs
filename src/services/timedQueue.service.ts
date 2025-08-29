@@ -1,8 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { QueueJob } from '../jobs/queueJob';
 
-const prismaClient = (global as any).prisma ?? new PrismaClient();
-const prisma = prismaClient;
+const prisma = (global as any).prisma ?? new PrismaClient();
 const queueJob = QueueJob.getInstance();
 
 export class TimedQueueService {
@@ -55,6 +54,9 @@ export class TimedQueueService {
         }
       });
 
+      // Schedule timeout for missed confirmation
+      await queueJob.scheduleTurnTimeout(nextPlayer.id, expiresAt);
+
       return {
         player: nextPlayer.Player,
         turnStartAt,
@@ -78,6 +80,9 @@ export class TimedQueueService {
         throw new Error('Invalid queue entry or not in active state');
       }
 
+      // Cancel the missed turn timeout
+      await queueJob.cancelJob(queueId);
+
       await prisma.queue.update({
         where: { id: queueId },
         data: {
@@ -88,9 +93,8 @@ export class TimedQueueService {
       });
 
       // Schedule completion after turn duration
-      setTimeout(async () => {
-        await this.completeTurn(queueId);
-      }, this.TURN_DURATION);
+      const completionTime = new Date(Date.now() + this.TURN_DURATION);
+      await queueJob.scheduleCompletion(queueId, completionTime);
 
       return { confirmed: true, player: queueEntry.Player };
     } catch (error) {
@@ -106,88 +110,25 @@ export class TimedQueueService {
         include: { Player: true }
       });
 
-      if (!queueEntry || queueEntry.status !== 'ACTIVE') {
-        return;
+      if (!queueEntry) {
+        throw new Error('Queue entry not found');
       }
 
-      // Mark as missed and move to end of queue
-      await prisma.queue.update({
-        where: { id: queueId },
-        data: {
-          status: 'MISSED',
-          missedTurns: { increment: 1 },
-          updatedAt: new Date()
-        }
-      });
-
-      // Re-queue at the end
-      await this.requeuePlayer(queueId);
-
-      // Process next player
-      await this.processNextInQueue(queueEntry.SimulatorId);
-    } catch (error) {
-      console.error('Error handling missed confirmation:', error);
-      throw error;
-    }
-  }
-
-  async requeuePlayer(queueId: number) {
-    try {
-      const queueEntry = await prisma.queue.findUnique({
-        where: { id: queueId }
-      });
-
-      if (!queueEntry) return;
-
-      const maxPosition = await prisma.queue.aggregate({
-        where: { SimulatorId: queueEntry.SimulatorId },
-        _max: { position: true }
-      });
-
-      const newPosition = (maxPosition._max.position || 0) + 1;
-
+      // Update the queue entry to mark as missed and increment missed turns
       await prisma.queue.update({
         where: { id: queueId },
         data: {
           status: 'WAITING',
-          position: newPosition,
+          missedTurns: queueEntry.missedTurns + 1,
           turnStartAt: null,
-          confirmedAt: null,
           expiresAt: null,
           updatedAt: new Date()
         }
       });
+
+      return { handled: true, player: queueEntry.Player };
     } catch (error) {
-      console.error('Error requeuing player:', error);
-      throw error;
-    }
-  }
-
-  async completeTurn(queueId: number) {
-    try {
-      const queueEntry = await prisma.queue.findUnique({
-        where: { id: queueId }
-      });
-
-      if (!queueEntry) return;
-
-      await prisma.queue.update({
-        where: { id: queueId },
-        data: {
-          status: 'COMPLETED',
-          updatedAt: new Date()
-        }
-      });
-
-      // Remove from queue
-      await prisma.queue.delete({
-        where: { id: queueId }
-      });
-
-      // Process next player
-      await this.processNextInQueue(queueEntry.SimulatorId);
-    } catch (error) {
-      console.error('Error completing turn:', error);
+      console.error('Error handling missed confirmation:', error);
       throw error;
     }
   }
