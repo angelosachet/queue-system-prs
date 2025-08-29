@@ -64,6 +64,9 @@ export class QueueJob {
 
       // Process next player
       await this.processNextInQueue(queueEntry.SimulatorId);
+      
+      // Clean up the job
+      this.jobs.delete(queueId);
     } catch (error) {
       console.error('Error handling missed turn:', error);
     }
@@ -126,21 +129,39 @@ export class QueueJob {
     await this.scheduleTurnTimeout(nextPlayer.id, expiresAt);
   }
 
-  async completeTurn(queueId: number) {
-    try {
-      await prisma.queue.delete({
-        where: { id: queueId }
-      });
+  async scheduleCompletion(queueId: number, completionTime: Date) {
+    const job = new CronJob(
+      completionTime,
+      async () => {
+        await this.completeTurn(queueId);
+      },
+      null,
+      false,
+      'UTC'
+    );
+    
+    this.jobs.set(queueId, job);
+    job.start();
+  }
 
-      // Process next player
+  private async completeTurn(queueId: number) {
+    try {
       const queueEntry = await prisma.queue.findUnique({
         where: { id: queueId },
         select: { SimulatorId: true }
       });
 
-      if (queueEntry) {
-        await this.processNextInQueue(queueEntry.SimulatorId);
-      }
+      if (!queueEntry) return;
+
+      await prisma.queue.delete({
+        where: { id: queueId }
+      });
+
+      // Clean up the job
+      this.jobs.delete(queueId);
+
+      // Process next player
+      await this.processNextInQueue(queueEntry.SimulatorId);
     } catch (error) {
       console.error('Error completing turn:', error);
     }
