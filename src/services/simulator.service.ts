@@ -1,6 +1,6 @@
-import { PrismaClient, Simulator } from "@prisma/client";
+import { PrismaClient, Simulator, Prisma } from "@prisma/client";
 
-const prisma = new PrismaClient();
+const prisma = (global as any).prisma ?? new PrismaClient();
 
 export class SimulatorService {
   async createSimulator(name: string): Promise<Simulator> {
@@ -64,7 +64,14 @@ export class SimulatorService {
   }
 
   async deleteSimulator(id: number): Promise<void> {
-    await prisma.simulator.delete({ where: { id } });
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Delete queue entries first
+      await tx.queue.deleteMany({ where: { SimulatorId: id } });
+      // Delete players associated with this simulator
+      await tx.player.deleteMany({ where: { simulatorId: id } });
+      // Finally delete the simulator
+      await tx.simulator.delete({ where: { id } });
+    });
   }
 
   async setActive(id: number, active: boolean): Promise<Simulator> {
