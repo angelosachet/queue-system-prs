@@ -2,15 +2,9 @@ import request from 'supertest';
 import { app } from '../src/app';
 
 describe('Simulator CRUD', () => {
-  beforeEach(async () => {
-    await global.prisma.queue.deleteMany();
-    await global.prisma.player.deleteMany();
-    await global.prisma.simulator.deleteMany();
-  });
 
-  afterAll(async () => {
-    await global.prisma.$disconnect();
-  });
+
+
 
   it('should create a simulator', async () => {
     const res = await request(app).post('/simulators').send({ name: 'Simulator A' });
@@ -26,7 +20,7 @@ describe('Simulator CRUD', () => {
   });
 
   it('should list simulators', async () => {
-    await global.prisma.simulator.create({ data: { name: 'Simulator B' } });
+    await request(app).post('/simulators').send({ name: 'Simulator B' });
 
     const res = await request(app).get('/simulators');
     expect(res.status).toBe(200);
@@ -35,7 +29,8 @@ describe('Simulator CRUD', () => {
   });
 
   it('should update a simulator', async () => {
-    const sim = await global.prisma.simulator.create({ data: { name: 'Old Name' } });
+    const createRes = await request(app).post('/simulators').send({ name: 'Old Name' });
+    const sim = createRes.body;
     const res = await request(app).put(`/simulators/${sim.id}`).send({ name: 'New Name', active: false });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('New Name');
@@ -43,7 +38,11 @@ describe('Simulator CRUD', () => {
   });
 
   it('should delete a simulator', async () => {
-    const sim = await global.prisma.simulator.create({ data: { name: 'To Delete' } });
+    const createRes = await request(app).post('/simulators').send({ name: 'To Delete' });
+    expect(createRes.status).toBe(201);
+    const sim = createRes.body;
+    expect(sim.id).toBeDefined();
+    
     const res = await request(app).delete(`/simulators/${sim.id}`);
     expect(res.status).toBe(204);
 
@@ -52,7 +51,8 @@ describe('Simulator CRUD', () => {
   });
 
   it('should activate/deactivate a simulator', async () => {
-    const sim = await global.prisma.simulator.create({ data: { name: 'Sim Active', active: false } });
+    const createRes = await request(app).post('/simulators').send({ name: 'Sim Active' });
+    const sim = createRes.body;
     const res = await request(app).put(`/simulators/${sim.id}/active`).send({ active: true });
     expect(res.status).toBe(200);
     expect(res.body.active).toBe(true);

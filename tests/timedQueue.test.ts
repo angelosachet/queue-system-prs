@@ -1,12 +1,25 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 import { PrismaClient } from '@prisma/client';
 import { TimedQueueService } from '../src/services/timedQueue.service';
+
+// Mock the QueueJob to prevent cron jobs from running
+jest.mock('../src/jobs/queueJob', () => ({
+  QueueJob: {
+    getInstance: () => ({
+      scheduleTurnTimeout: jest.fn(),
+      cancelJob: jest.fn(),
+      scheduleCompletion: jest.fn()
+    })
+  }
+}));
+
 let prisma: PrismaClient;
+let timedQueueService: TimedQueueService;
 
 beforeAll(() => {
   prisma = (global as any).prisma as PrismaClient;
+  timedQueueService = new TimedQueueService();
 });
-const timedQueueService = new TimedQueueService();
 describe('Timed Queue System', () => {
   let simulatorId: number;
   let player1Id: number;
@@ -65,7 +78,7 @@ describe('Timed Queue System', () => {
     });
   });
   afterAll(async () => {
-    await prisma.$disconnect();
+    // No need to disconnect as we're using global prisma
   });
   it('should start timed queue and assign first player', async () => {
     const result = await timedQueueService.processNextInQueue(simulatorId);
