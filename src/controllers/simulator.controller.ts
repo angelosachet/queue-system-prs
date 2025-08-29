@@ -10,7 +10,10 @@ export class SimulatorController {
       if (!name) return res.status(400).json({ error: 'Name is required' });
 
       const simulator = await service.createSimulator(name);
-      return res.status(201).json(simulator);
+      return res.status(201).json({
+        ...simulator,
+        message: 'Simulator created with empty queue'
+      });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
