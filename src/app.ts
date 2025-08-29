@@ -4,6 +4,7 @@ import cors from 'cors';
 import { playerRouter } from './routes/player.routes';
 import { simulatorRouter } from './routes/simulator.routes';
 import { queueRouter } from './routes/queue.routes';
+import timedQueueRouter from './controllers/timedQueue.controller';
 
 const app = express();
 
@@ -22,5 +23,6 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/players', playerRouter);
 app.use('/simulators', simulatorRouter);
 app.use('/queue', queueRouter);
+app.use('/timed-queue', timedQueueRouter);
 
 export { app };
