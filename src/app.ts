@@ -4,14 +4,14 @@ import cors from 'cors';
 import { playerRouter } from './routes/player.routes';
 import { simulatorRouter } from './routes/simulator.routes';
 import { queueRouter } from './routes/queue.routes';
-import timedQueueRouter from './controllers/timedQueue.controller';
+import { timedQueueRouter } from './routes/timed-queue.routes';
 
 const app = express();
 
-// Permite qualquer origem (útil para desenvolvimento)
+// Allow any origin (useful for development)
 app.use(cors());
 
-// // ou para permitir só o front-end
+// // or to allow only the front-end
 // app.use(cors({
 //   origin: "http://localhost:5173"
 // }));

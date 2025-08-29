@@ -1,6 +1,7 @@
 import { PrismaClient, Player } from '@prisma/client';
 
-const prisma = new PrismaClient();
+// Use global prisma in tests, otherwise create new instance
+const prisma = (global as any).prisma || new PrismaClient();
 
 export class PlayerService {
   async create(name: string): Promise<Player> {
