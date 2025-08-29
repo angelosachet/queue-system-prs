@@ -1,11 +1,27 @@
-import { PrismaClient, Simulator } from '@prisma/client';
+import { PrismaClient, Simulator } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 export class SimulatorService {
   async createSimulator(name: string): Promise<Simulator> {
     return prisma.simulator.create({
-      data: { name },
+      data: { 
+        name,
+        Queue: {
+          create: {
+            position: 0,
+            Player: {
+              create: {
+                name: 'Dummy Player',
+                inQueue: true
+              }
+            }
+          }
+        }
+      },
+      include: {
+        Queue: true
+      }
     });
   }
 
@@ -13,7 +29,11 @@ export class SimulatorService {
     return prisma.simulator.findMany({
       include: {
         Players: true,
-        Queue: true,
+        Queue: {
+          include: {
+            Player: true
+          }
+        },
       },
     });
   }
@@ -21,11 +41,22 @@ export class SimulatorService {
   async getSimulatorById(id: number): Promise<Simulator | null> {
     return prisma.simulator.findUnique({
       where: { id },
-      include: { Players: true, Queue: true },
+      include: { 
+        Players: true, 
+        Queue: {
+          include: {
+            Player: true
+          }
+        } 
+      },
     });
   }
 
-  async updateSimulator(id: number, name: string, active?: boolean): Promise<Simulator> {
+  async updateSimulator(
+    id: number,
+    name: string,
+    active?: boolean
+  ): Promise<Simulator> {
     return prisma.simulator.update({
       where: { id },
       data: { name, active },
