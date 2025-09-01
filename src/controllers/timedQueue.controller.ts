@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { TimedQueueService } from '../services/timedQueue.service';
 
-export class TimedQueueController {
+export class TimedQueueController { //starts the timer in specific queue
   private timedQueueService = new TimedQueueService();
 
   async startTimedQueue(req: Request, res: Response) {
@@ -24,7 +24,7 @@ export class TimedQueueController {
   }
 
   async getQueueStatus(req: Request, res: Response) {
-    try {
+    try { //return the queue status
       const simulatorId = parseInt(req.params.simulatorId);
       const queueStatus = await this.timedQueueService.getQueueStatus(simulatorId);
       
@@ -42,7 +42,7 @@ export class TimedQueueController {
   }
 
   async processNext(req: Request, res: Response) {
-    try {
+    try { //processes the next in queue
       const simulatorId = parseInt(req.params.simulatorId);
       const result = await this.timedQueueService.processNextInQueue(simulatorId);
       
@@ -68,7 +68,7 @@ export class TimedQueueController {
   }
 
   async confirmTurn(req: Request, res: Response) {
-    try {
+    try {//confirms a player turn
       const queueId = parseInt(req.params.queueId);
       const result = await this.timedQueueService.confirmPlayerTurn(queueId);
       
@@ -87,7 +87,7 @@ export class TimedQueueController {
   }
 
   async handleMissed(req: Request, res: Response) {
-    try {
+    try { // player missed his turn
       const queueId = parseInt(req.params.queueId);
       await this.timedQueueService.handleMissedConfirmation(queueId);
       

@@ -1,17 +1,25 @@
 import { PrismaClient } from '@prisma/client';
 import { QueueJob } from '../jobs/queueJob';
 
+// Use global Prisma instance if available, otherwise create new one
 const prisma = (global as any).prisma ?? new PrismaClient();
+// Get singleton instance of queue job scheduler
 const queueJob = QueueJob.getInstance();
 
 export class TimedQueueService {
+  // Time constants for queue management
   private TURN_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
   private CONFIRMATION_WINDOW = 3 * 60 * 1000; // 3 minutes in milliseconds
 
+  /**
+   * Starts the timed queue system for a simulator
+   */
   async startTimedQueue(simulatorId: number) {
     try {
+      // Check if there's already an active player
       const activeQueue = await this.getActiveQueue(simulatorId);
       if (!activeQueue) {
+        // Start processing the next player in queue
         await this.processNextInQueue(simulatorId);
       }
       return { started: true };
@@ -21,8 +29,12 @@ export class TimedQueueService {
     }
   }
 
+  /**
+   * Processes the next waiting player in queue and activates their turn
+   */
   async processNextInQueue(simulatorId: number) {
     try {
+      // Find next waiting player by position
       const nextPlayer = await prisma.queue.findFirst({
         where: {
           SimulatorId: simulatorId,
@@ -40,10 +52,12 @@ export class TimedQueueService {
         return null;
       }
 
+      // Set turn timing
       const now = new Date();
       const turnStartAt = now;
       const expiresAt = new Date(now.getTime() + this.CONFIRMATION_WINDOW);
 
+      // Activate player's turn
       await prisma.queue.update({
         where: { id: nextPlayer.id },
         data: {
@@ -69,6 +83,9 @@ export class TimedQueueService {
     }
   }
 
+  /**
+   * Confirms a player's turn and schedules completion
+   */
   async confirmPlayerTurn(queueId: number) {
     try {
       const queueEntry = await prisma.queue.findUnique({
@@ -83,6 +100,7 @@ export class TimedQueueService {
       // Cancel the missed turn timeout
       await queueJob.cancelJob(queueId);
 
+      // Mark turn as confirmed
       await prisma.queue.update({
         where: { id: queueId },
         data: {
@@ -103,6 +121,9 @@ export class TimedQueueService {
     }
   }
 
+  /**
+   * Handles when a player misses their confirmation window
+   */
   async handleMissedConfirmation(queueId: number) {
     try {
       const queueEntry = await prisma.queue.findUnique({
@@ -114,7 +135,7 @@ export class TimedQueueService {
         throw new Error('Queue entry not found');
       }
 
-      // Update the queue entry to mark as missed and increment missed turns
+      // Reset player to waiting status and increment missed turns counter
       await prisma.queue.update({
         where: { id: queueId },
         data: {
@@ -133,6 +154,9 @@ export class TimedQueueService {
     }
   }
 
+  /**
+   * Gets the currently active player in a simulator's queue
+   */
   async getActiveQueue(simulatorId: number) {
     try {
       return await prisma.queue.findFirst({
@@ -152,8 +176,12 @@ export class TimedQueueService {
     }
   }
 
+  /**
+   * Calculates estimated wait time for a player based on their position
+   */
   async calculateWaitTime(simulatorId: number, currentPosition: number) {
     try {
+      // Count active/confirmed players
       const activePlayers = await prisma.queue.count({
         where: {
           SimulatorId: simulatorId,
@@ -163,6 +191,7 @@ export class TimedQueueService {
         }
       });
 
+      // Count waiting players ahead in queue
       const waitingPlayers = await prisma.queue.count({
         where: {
           SimulatorId: simulatorId,
@@ -173,6 +202,7 @@ export class TimedQueueService {
         }
       });
 
+      // Calculate total wait time based on players ahead
       const totalAhead = activePlayers + waitingPlayers;
       return totalAhead * this.TURN_DURATION;
     } catch (error) {
@@ -181,39 +211,5 @@ export class TimedQueueService {
     }
   }
 
-  async getQueueStatus(simulatorId: number) {
-    try {
-      const queue = await prisma.queue.findMany({
-        where: { SimulatorId: simulatorId },
-        orderBy: { position: 'asc' },
-        include: {
-          Player: true
-        }
-      });
 
-      const results = [];
-      for (const entry of queue) {
-        const estimatedWaitTime = entry.status === 'WAITING' 
-          ? await this.calculateWaitTime(simulatorId, entry.position)
-          : null;
-
-        results.push({
-          id: entry.id,
-          player: entry.Player,
-          position: entry.position,
-          status: entry.status,
-          turnStartAt: entry.turnStartAt,
-          expiresAt: entry.expiresAt,
-          confirmedAt: entry.confirmedAt,
-          missedTurns: entry.missedTurns,
-          estimatedWaitTime
-        });
-      }
-
-      return results;
-    } catch (error) {
-      console.error('Error getting queue status:', error);
-      throw error;
-    }
-  }
 }

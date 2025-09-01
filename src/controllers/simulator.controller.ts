@@ -4,7 +4,7 @@ import { SimulatorService } from '../services/simulator.service';
 const service = new SimulatorService();
 
 export class SimulatorController {
-  async create(req: Request, res: Response) {
+  async create(req: Request, res: Response) { //create a sim
     try {
       const { name } = req.body;
       if (!name) return res.status(400).json({ error: 'Name is required' });
@@ -21,7 +21,7 @@ export class SimulatorController {
 
   async list(req: Request, res: Response) {
     try {
-      const simulators = await service.listSimulators();
+      const simulators = await service.listSimulators(); //list all simulators available
       return res.json(simulators);
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
@@ -30,7 +30,7 @@ export class SimulatorController {
 
   async get(req: Request, res: Response) {
     try {
-      const id = Number(req.params.id);
+      const id = Number(req.params.id); //get specific simulator by ID
       const simulator = await service.getSimulatorById(id);
       if (!simulator) return res.status(404).json({ error: 'Simulator not found' });
 
@@ -40,7 +40,7 @@ export class SimulatorController {
     }
   }
 
-  async update(req: Request, res: Response) {
+  async update(req: Request, res: Response) { //update sim info based on id
     try {
       const id = Number(req.params.id);
       const { name, active } = req.body;
@@ -51,7 +51,7 @@ export class SimulatorController {
     }
   }
 
-  async delete(req: Request, res: Response) {
+  async delete(req: Request, res: Response) { //delete sim based on id
     try {
       const id = Number(req.params.id);
       await service.deleteSimulator(id);
@@ -61,7 +61,7 @@ export class SimulatorController {
     }
   }
 
-  async setActive(req: Request, res: Response) {
+  async setActive(req: Request, res: Response) { //set simulator active status
     try {
       const id = Number(req.params.id);
       const { active } = req.body;

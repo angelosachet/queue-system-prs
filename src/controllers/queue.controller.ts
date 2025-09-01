@@ -5,14 +5,14 @@ const service = new QueueService();
 
 export class QueueController {
   // Adiciona jogador à fila
-  async addPlayer(req: Request, res: Response) {
+  async addPlayer(req: Request, res: Response) { 
     try {
       const { playerId, simulatorId } = req.body;
       if (!playerId || !simulatorId)
         return res.status(400).json({ error: 'Player ID and Simulator ID are required' });
 
       const queue = await service.addPlayerToQueue(
-        Number(playerId),
+        Number(playerId),   // add a player to a specif simulator queue
         Number(simulatorId)
       );
       
@@ -28,7 +28,7 @@ export class QueueController {
 
   async createQueue(req: Request, res: Response) {
     try {
-      const { PlayerId, SimulatorId } = req.body;
+      const { PlayerId, SimulatorId } = req.body; //create a queue, at least one player is needed on it (no player should be needed actually change it after)
 
       if (!PlayerId || !SimulatorId) {
         return res
@@ -46,7 +46,7 @@ export class QueueController {
     }
   }
 
-  // Lista todos os jogadores na fila de um simulador
+// list all the players on the queue for a specific sim
   async listQueue(req: Request, res: Response) {
     try {
       const simulatorId = Number(req.params.simulatorId);
@@ -60,7 +60,7 @@ export class QueueController {
       return res.status(500).json({ error: err.message });
     }
   }
-  // Lista todas as filas de todos simuladores
+  // List all queues for all simulators
   async listAllQueues(req: Request, res: Response) {
     try {
       const queues = await service.getAllQueues();
@@ -70,7 +70,7 @@ export class QueueController {
     }
   }
 
-  // Remove jogador da fila e reorganiza posições
+  // remove a player from the queue
   async removePlayer(req: Request, res: Response) {
     try {
       const queueId = Number(req.params.queueId);
@@ -85,7 +85,7 @@ export class QueueController {
     }
   }
 
-  // Move jogador para nova posição
+  // Move player to new position
   async movePlayer(req: Request, res: Response) {
     try {
       const queueId = Number(req.params.queueId);
