@@ -5,6 +5,7 @@ import { playerRouter } from './routes/player.routes';
 import { simulatorRouter } from './routes/simulator.routes';
 import { queueRouter } from './routes/queue.routes';
 import { timedQueueRouter } from './routes/timed-queue.routes';
+import { authRouter } from './routes/auth.routes';
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use(express.json());
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
+app.use('/auth', authRouter);
 app.use('/players', playerRouter);
 app.use('/simulators', simulatorRouter);
 app.use('/queue', queueRouter);
