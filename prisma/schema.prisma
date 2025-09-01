@@ -8,19 +8,44 @@ datasource db {
   url      = env("DATABASE_URL_TEST")
 }
 
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(PLAYER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Player specific fields
+  phone       String?
+  instagram   String?
+  inQueue     Boolean  @default(true)
+  sellerId    Int?     // Seller que indicou este player
+  seller      User?    @relation("SellerPlayers", fields: [sellerId], references: [id])
+  players     User[]   @relation("SellerPlayers") // Players indicados por este seller
+
+  // Simulator relation
+  simulatorId Int?
+  simulator   Simulator? @relation(fields: [simulatorId], references: [id])
+
+  // Queue relation
+  Queues Queue[]
+}
+
 model Player {
   id          Int        @id @default(autoincrement())
   name        String
-  email       String     @unique // email do jogador (obrigatório e único)
-  phone       String?    // telefone do jogador (opcional)
-  instagram   String?    // Instagram do jogador (opcional)
+  email       String     @unique
+  phone       String?
+  instagram   String?
   inQueue     Boolean    @default(true)
   createdAt   DateTime   @default(now())
 
-  simulatorId Int?       
+  simulatorId Int?
   simulator   Simulator? @relation(fields: [simulatorId], references: [id])
 
-  Queues      Queue[]    // relação oposta com Queue
+  Queues      Queue[]
 }
 
 model Simulator {
@@ -28,7 +53,8 @@ model Simulator {
   name      String
   active    Boolean    @default(true)
 
-  Players   Player[]   // um simulador pode ter vários Players ao longo do tempo
+  Users     User[]     // usuários associados ao simulador
+  Players   Player[]   // players associados ao simulador
   Queue     Queue[]    // fila associada ao simulador
 }
 
@@ -36,6 +62,8 @@ model Queue {
   id          Int        @id @default(autoincrement())
   PlayerId    Int
   Player      Player     @relation(fields: [PlayerId], references: [id])
+  UserId      Int?
+  User        User?      @relation(fields: [UserId], references: [id])
 
   SimulatorId Int
   Simulator   Simulator  @relation(fields: [SimulatorId], references: [id])
@@ -53,6 +81,13 @@ model Queue {
   // For re-queue tracking
   missedTurns Int        @default(0)
   totalWaitTime Int      @default(0) // in seconds
+}
+
+enum UserRole {
+  MASTER
+  ADMIN
+  SELLER
+  PLAYER
 }
 
 enum QueueStatus {
