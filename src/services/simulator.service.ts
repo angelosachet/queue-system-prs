@@ -5,25 +5,11 @@ const prisma = (global as any).prisma ?? new PrismaClient();
 
 export class SimulatorService {
   /**
-   * Creates a new simulator with a dummy player in queue at position 0
+   * Creates a new simulator
    */
   async createSimulator(name: string): Promise<Simulator> {
     return prisma.simulator.create({
-      data: { 
-        name,
-        // Create initial queue entry with dummy player
-        // Queue: {
-        //   create: {
-        //     position: 0,
-        //     Player: {
-        //       create: {
-        //         name: 'Dummy Player',
-        //         inQueue: true
-        //       }
-        //     }
-        //   }
-        // }
-      },
+      data: { name },
       include: {
         Queue: true
       }
