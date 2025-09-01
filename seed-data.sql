@@ -2,22 +2,22 @@
 -- Run these SQL commands to populate your database with initial test data
 
 -- Insert test players
-INSERT INTO "Player" (name, "inQueue", "createdAt") VALUES 
-('Test User 1', false, NOW()),
-('Test User 2', false, NOW()),
-('Test User 3', false, NOW()),
-('Test User 4', false, NOW()),
-('Test User 5', false, NOW()),
-('Test User 6', false, NOW()),
-('Test User 7', false, NOW()),
-('Test User 8', false, NOW()),
-('Test User 9', false, NOW()),
-('Test User 10', false, NOW()),
-('Test User 11', false, NOW()),
-('Test User 12', false, NOW()),
-('Test User 13', false, NOW()),
-('Test User 14', false, NOW()),
-('Test User 15', false, NOW());
+INSERT INTO "Player" (name, email, "inQueue", "createdAt") VALUES 
+('Test User 1', 'user1@test.com', false, NOW()),
+('Test User 2', 'user2@test.com', false, NOW()),
+('Test User 3', 'user3@test.com', false, NOW()),
+('Test User 4', 'user4@test.com', false, NOW()),
+('Test User 5', 'user5@test.com', false, NOW()),
+('Test User 6', 'user6@test.com', false, NOW()),
+('Test User 7', 'user7@test.com', false, NOW()),
+('Test User 8', 'user8@test.com', false, NOW()),
+('Test User 9', 'user9@test.com', false, NOW()),
+('Test User 10', 'user10@test.com', false, NOW()),
+('Test User 11', 'user11@test.com', false, NOW()),
+('Test User 12', 'user12@test.com', false, NOW()),
+('Test User 13', 'user13@test.com', false, NOW()),
+('Test User 14', 'user14@test.com', false, NOW()),
+('Test User 15', 'user15@test.com', false, NOW());
 
 -- Insert test simulators
 INSERT INTO "Simulator" (name, active) VALUES 

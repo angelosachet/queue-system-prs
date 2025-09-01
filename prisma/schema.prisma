@@ -11,7 +11,7 @@ datasource db {
 model Player {
   id          Int        @id @default(autoincrement())
   name        String
-  email       String?    // email do jogador (opcional)
+  email       String     @unique // email do jogador (obrigatório e único)
   phone       String?    // telefone do jogador (opcional)
   instagram   String?    // Instagram do jogador (opcional)
   inQueue     Boolean    @default(true)
