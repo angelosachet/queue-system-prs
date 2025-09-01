@@ -11,13 +11,16 @@ datasource db {
 model Player {
   id          Int        @id @default(autoincrement())
   name        String
+  email       String?    // email do jogador (opcional)
+  phone       String?    // telefone do jogador (opcional)
+  instagram   String?    // Instagram do jogador (opcional)
   inQueue     Boolean    @default(true)
   createdAt   DateTime   @default(now())
 
   simulatorId Int?       
   simulator   Simulator? @relation(fields: [simulatorId], references: [id])
 
-  Queues       Queue[]     // relação oposta com Queue
+  Queues      Queue[]    // relação oposta com Queue
 }
 
 model Simulator {
