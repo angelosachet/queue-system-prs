@@ -126,9 +126,9 @@ export class AuthController {
       }
 
       const result = await authService.register(
-        name || 'Master Admin',
-        email || 'master@simqueue.com', 
-        password || 'master123',
+        name || process.env.DEFAULT_MASTER_NAME || 'Master Admin',
+        email || process.env.DEFAULT_MASTER_EMAIL || 'master@simqueue.com', 
+        password || process.env.DEFAULT_MASTER_PASSWORD || 'master123',
         UserRole.MASTER
       );
 
