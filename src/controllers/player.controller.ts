@@ -6,18 +6,23 @@ const service = new PlayerService();
 export class PlayerController {
   async create(req: Request, res: Response) {
     try {
-      const { name } = req.body;
-      if (!name) return res.status(400).json({ error: 'Name is required' }); //creating a user, only a name is needed
+      const { name, email } = req.body;
+      if (!name) return res.status(400).json({ error: 'Name is required' });
+      if (!email) return res.status(400).json({ error: 'Email is required' });
 
-      const player = await service.create(name);
+      const player = await service.create(name, email);
       return res.status(201).json(player);
-    } catch (err) {
+    } catch (err: any) {
+      if (err.message === 'Email already exists') {
+        return res.status(409).json({ error: 'Email already exists' });
+      }
       return res.status(500).json({ error: 'Failed to create player' });
     }
   }
 
-  async getAll(_req: Request, res: Response) {
-    const players = await service.findAll();
+  async getAll(req: Request, res: Response) {
+    const { email } = req.query;
+    const players = await service.findAll(email as string);
     return res.json(players); //return a list with all the players
   }
 
@@ -31,12 +36,15 @@ export class PlayerController {
   async update(req: Request, res: Response) { //update user info, based on id
     try {
       const id = Number(req.params.id);
-      const { name } = req.body;
+      const { name, email } = req.body;
       if (!name) return res.status(400).json({ error: 'Name is required' });
 
-      const updated = await service.update(id, name);
+      const updated = await service.update(id, name, email);
       return res.json(updated);
-    } catch {
+    } catch (err: any) {
+      if (err.message === 'Email already exists') {
+        return res.status(409).json({ error: 'Email already exists' });
+      }
       return res.status(404).json({ error: 'Player not found' });
     }
   }

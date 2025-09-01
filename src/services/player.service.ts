@@ -4,20 +4,48 @@ import { PrismaClient, Player } from '@prisma/client';
 const prisma = (global as any).prisma || new PrismaClient();
 
 export class PlayerService {
-  async create(name: string): Promise<Player> {
-    return prisma.player.create({ data: { name } });
+  async create(name: string, email: string): Promise<Player> {
+    // Check if email already exists
+    const existingPlayer = await prisma.player.findFirst({
+      where: { email }
+    });
+    
+    if (existingPlayer) {
+      throw new Error('Email already exists');
+    }
+    
+    return prisma.player.create({ data: { name, email } });
   }
 
-  async findAll(): Promise<Player[]> {
-    return prisma.player.findMany({ orderBy: { createdAt: 'asc' } });
+  async findAll(email?: string): Promise<Player[]> {
+    const where = email ? { email } : {};
+    return prisma.player.findMany({ 
+      where,
+      orderBy: { createdAt: 'asc' } 
+    });
   }
 
   async findById(id: number): Promise<Player | null> {
     return prisma.player.findUnique({ where: { id } });
   }
 
-  async update(id: number, name: string): Promise<Player> {
-    return prisma.player.update({ where: { id }, data: { name } });
+  async update(id: number, name: string, email?: string): Promise<Player> {
+    const updateData: any = { name };
+    
+    if (email) {
+      // Check if email already exists for another player
+      const existingPlayer = await prisma.player.findFirst({
+        where: { email, id: { not: id } }
+      });
+      
+      if (existingPlayer) {
+        throw new Error('Email already exists');
+      }
+      
+      updateData.email = email;
+    }
+    
+    return prisma.player.update({ where: { id }, data: updateData });
   }
 
   async delete(id: number): Promise<Player> {
