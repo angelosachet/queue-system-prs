@@ -211,5 +211,42 @@ export class TimedQueueService {
     }
   }
 
+  /**
+   * Gets complete queue status with wait times for all players
+   */
+  async getQueueStatus(simulatorId: number) {
+    try {
+      const queue = await prisma.queue.findMany({
+        where: { SimulatorId: simulatorId },
+        orderBy: { position: 'asc' },
+        include: {
+          Player: true
+        }
+      });
 
+      const results = [];
+      for (const entry of queue) {
+        const estimatedWaitTime = entry.status === 'WAITING' 
+          ? await this.calculateWaitTime(simulatorId, entry.position)
+          : null;
+
+        results.push({
+          id: entry.id,
+          player: entry.Player,
+          position: entry.position,
+          status: entry.status,
+          turnStartAt: entry.turnStartAt,
+          expiresAt: entry.expiresAt,
+          confirmedAt: entry.confirmedAt,
+          missedTurns: entry.missedTurns,
+          estimatedWaitTime
+        });
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Error getting queue status:', error);
+      throw error;
+    }
+  }
 }
