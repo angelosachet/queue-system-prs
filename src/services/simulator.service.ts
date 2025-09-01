@@ -12,17 +12,17 @@ export class SimulatorService {
       data: { 
         name,
         // Create initial queue entry with dummy player
-        Queue: {
-          create: {
-            position: 0,
-            Player: {
-              create: {
-                name: 'Dummy Player',
-                inQueue: true
-              }
-            }
-          }
-        }
+        // Queue: {
+        //   create: {
+        //     position: 0,
+        //     Player: {
+        //       create: {
+        //         name: 'Dummy Player',
+        //         inQueue: true
+        //       }
+        //     }
+        //   }
+        // }
       },
       include: {
         Queue: true
