@@ -34,6 +34,32 @@ export class TimedQueueService {
    */
   async processNextInQueue(simulatorId: number) {
     try {
+      // Move current active/confirmed player to end of queue
+      const currentActive = await prisma.queue.findFirst({
+        where: {
+          SimulatorId: simulatorId,
+          status: { in: ['ACTIVE', 'CONFIRMED'] }
+        }
+      });
+
+      if (currentActive) {
+        const lastPosition = await prisma.queue.findFirst({
+          where: { SimulatorId: simulatorId },
+          orderBy: { position: 'desc' }
+        });
+        
+        await prisma.queue.update({
+          where: { id: currentActive.id },
+          data: {
+            status: 'WAITING',
+            position: (lastPosition?.position || 0) + 1,
+            turnStartAt: null,
+            expiresAt: null,
+            confirmedAt: null
+          }
+        });
+      }
+
       // Find next waiting player by position
       const nextPlayer = await prisma.queue.findFirst({
         where: {
@@ -225,10 +251,21 @@ export class TimedQueueService {
       });
 
       const results = [];
+      const now = new Date();
+      
       for (const entry of queue) {
         const estimatedWaitTime = entry.status === 'WAITING' 
           ? await this.calculateWaitTime(simulatorId, entry.position)
           : null;
+
+        // Calculate time left based on status
+        let timeLeft = null;
+        if (entry.status === 'ACTIVE' && entry.expiresAt) {
+          timeLeft = Math.max(0, entry.expiresAt.getTime() - now.getTime());
+        } else if (entry.status === 'CONFIRMED' && entry.confirmedAt) {
+          const completionTime = new Date(entry.confirmedAt.getTime() + this.TURN_DURATION);
+          timeLeft = Math.max(0, completionTime.getTime() - now.getTime());
+        }
 
         results.push({
           id: entry.id,
@@ -239,7 +276,8 @@ export class TimedQueueService {
           expiresAt: entry.expiresAt,
           confirmedAt: entry.confirmedAt,
           missedTurns: entry.missedTurns,
-          estimatedWaitTime
+          estimatedWaitTime,
+          timeLeft
         });
       }
 
