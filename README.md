@@ -43,21 +43,36 @@ A simple queue management system for simulators with timed turns and player mana
 ## Queue States
 
 - **WAITING** - Player waiting in queue
-- **ACTIVE** - Player's turn started, awaiting confirmation
-- **CONFIRMED** - Player confirmed, turn in progress
+- **ACTIVE** - Player's turn started, awaiting confirmation (3 min window)
+- **CONFIRMED** - Player confirmed, turn in progress (5 min duration)
+- **MISSED** - Player missed their confirmation window
+- **COMPLETED** - Player finished their turn
 
 ## Configuration
 
 - **Turn Duration**: 5 minutes
 - **Confirmation Window**: 3 minutes
 
+## Queue Flow
+
+1. **Start Queue** - First player becomes ACTIVE with 3-minute confirmation window
+2. **Confirm Turn** - Player becomes CONFIRMED with 5-minute turn timer
+3. **Turn Completion** - Player is removed, next player automatically becomes ACTIVE
+4. **Missed Confirmation** - Player moved to end of queue, next player becomes ACTIVE
+
 ## Setup
 
 1. Install dependencies: `npm install`
-2. Setup database with Prisma
-3. Start server: `npm start`
+2. Setup database: `npx prisma migrate dev`
+3. Seed test data: `npm run seed:test` (for test environment)
+4. Start server: `npm run dev` (development) or `npm start` (production)
 
 Server runs on `http://localhost:3000`
+
+## Testing
+
+- `npm test` - Run tests with automatic database reset and seeding
+- `npm run test:setup` - Reset and seed test database only
 
 ## Health Check
 

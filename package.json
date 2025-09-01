@@ -6,8 +6,9 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test:setup": "cross-env NODE_ENV=test npx prisma migrate reset --force",
-    "test": "npm run test:setup && jest --runInBand"
+    "test:setup": "cross-env NODE_ENV=test npx prisma migrate reset --force && npm run seed:test",
+    "test": "npm run test:setup && jest --runInBand",
+    "seed:test": "cross-env NODE_ENV=test ts-node prisma/seed.ts"
   },
   "keywords": [],
   "author": "",

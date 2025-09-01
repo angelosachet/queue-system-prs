@@ -126,18 +126,21 @@ export class TimedQueueService {
       // Cancel the missed turn timeout
       await queueJob.cancelJob(queueId);
 
-      // Mark turn as confirmed
+      // Mark turn as confirmed and start actual turn timer
+      const now = new Date();
+      const completionTime = new Date(now.getTime() + this.TURN_DURATION);
+      
       await prisma.queue.update({
         where: { id: queueId },
         data: {
           status: 'CONFIRMED',
-          confirmedAt: new Date(),
-          updatedAt: new Date()
+          confirmedAt: now,
+          expiresAt: completionTime,
+          updatedAt: now
         }
       });
 
-      // Schedule completion after turn duration
-      const completionTime = new Date(Date.now() + this.TURN_DURATION);
+      // Schedule completion and next player processing
       await queueJob.scheduleCompletion(queueId, completionTime);
 
       return { confirmed: true, player: queueEntry.Player };
