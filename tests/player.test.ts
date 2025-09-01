@@ -13,7 +13,7 @@ describe('Player CRUD', () => {
   });
 
   it('creates a player', async () => {
-    const res = await request(app).post('/players').send({ name: 'Maria' });
+    const res = await request(app).post('/players').send({ name: 'Maria', email: 'maria@test.com' });
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('Maria');
     expect(res.body.inQueue).toBe(true);
@@ -23,7 +23,7 @@ describe('Player CRUD', () => {
   });
 
   it('lists players', async () => {
-    await global.prisma.player.create({ data: { name: 'Maria' } });
+    await global.prisma.player.create({ data: { name: 'Maria', email: 'maria@test.com' } });
     const res = await request(app).get('/players');
     expect(res.status).toBe(200);
     expect(res.body.length).toBe(1);
@@ -31,14 +31,14 @@ describe('Player CRUD', () => {
   });
 
   it('updates a player', async () => {
-    const player = await global.prisma.player.create({ data: { name: 'Maria' } });
+    const player = await global.prisma.player.create({ data: { name: 'Maria', email: 'maria@test.com' } });
     const res = await request(app).put(`/players/${player.id}`).send({ name: 'Ana' });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Ana');
   });
 
   it('deletes a player', async () => {
-    const player = await global.prisma.player.create({ data: { name: 'Maria' } });
+    const player = await global.prisma.player.create({ data: { name: 'Maria', email: 'maria@test.com' } });
     const res = await request(app).delete(`/players/${player.id}`);
     expect(res.status).toBe(204);
 

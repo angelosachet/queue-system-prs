@@ -36,6 +36,7 @@ describe('Timed Queue System', () => {
     const player1 = await prisma.player.create({
       data: {
         name: 'Test Player 1',
+        email: 'testplayer1@mail.com',
         inQueue: true
       }
     });
@@ -43,6 +44,7 @@ describe('Timed Queue System', () => {
     const player2 = await prisma.player.create({
       data: {
         name: 'Test Player 2',
+        email:"testplayer@mail.com",
         inQueue: true
       }
     });
@@ -119,6 +121,7 @@ describe('Timed Queue System', () => {
     const player3 = await prisma.player.create({
       data: {
         name: 'Test Player 3',
+        email: 'testplayer3@mail.com',
         inQueue: true
       }
     });

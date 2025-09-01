@@ -2,21 +2,27 @@ import request from 'supertest';
 import { app } from '../src/app';
 
 describe('Simulator CRUD', () => {
+  beforeEach(async () => {
+    await global.prisma.queue.deleteMany();
+    await global.prisma.player.deleteMany();
+    await global.prisma.user.deleteMany();
+    await global.prisma.simulator.deleteMany();
+  });
 
-
-
+  afterAll(async () => {
+    await global.prisma.$disconnect();
+  });
 
   it('should create a simulator', async () => {
     const res = await request(app).post('/simulators').send({ name: 'Simulator A' });
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('Simulator A');
-    expect(res.body.message).toBe('Simulator created with empty queue');
 
     const simulators = await global.prisma.simulator.findMany({
       include: { Queue: true }
     });
     expect(simulators.length).toBe(1);
-    expect(simulators[0].Queue.length).toBe(1);
+    expect(simulators[0].Queue.length).toBe(0); // No dummy player created anymore
   });
 
   it('should list simulators', async () => {
