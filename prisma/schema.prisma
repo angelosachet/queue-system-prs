@@ -33,7 +33,8 @@ model User {
   Queues Queue[]
   
   // Sale records relation
-  SaleRecords SaleRecord[] @relation("SaleRecords")
+  SellerSales SaleRecord[] @relation("SellerSales")
+  PlayerSales SaleRecord[] @relation("PlayerSales")
 }
 
 model Player {
@@ -49,7 +50,6 @@ model Player {
   simulator   Simulator? @relation(fields: [simulatorId], references: [id])
 
   Queues      Queue[]
-  SaleRecords SaleRecord[]
 }
 
 model Simulator {
@@ -65,10 +65,10 @@ model Simulator {
 
 model Queue {
   id          Int        @id @default(autoincrement())
-  PlayerId    Int
-  Player      Player     @relation(fields: [PlayerId], references: [id])
-  UserId      Int?
-  User        User?      @relation(fields: [UserId], references: [id])
+  PlayerId    Int?
+  Player      Player?    @relation(fields: [PlayerId], references: [id])
+  UserId      Int
+  User        User       @relation(fields: [UserId], references: [id])
 
   SimulatorId Int
   Simulator   Simulator  @relation(fields: [SimulatorId], references: [id])
@@ -102,9 +102,9 @@ enum UserRole {
 model SaleRecord {
   id          Int       @id @default(autoincrement())
   sellerId    Int
-  seller      User      @relation("SaleRecords", fields: [sellerId], references: [id])
+  seller      User      @relation("SellerSales", fields: [sellerId], references: [id])
   playerId    Int
-  player      Player    @relation(fields: [playerId], references: [id])
+  player      User      @relation("PlayerSales", fields: [playerId], references: [id])
   simulatorId Int
   simulator   Simulator @relation(fields: [simulatorId], references: [id])
   amountPaid  Float
