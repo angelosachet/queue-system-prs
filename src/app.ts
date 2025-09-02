@@ -6,6 +6,7 @@ import { simulatorRouter } from './routes/simulator.routes';
 import { queueRouter } from './routes/queue.routes';
 import { timedQueueRouter } from './routes/timed-queue.routes';
 import { authRouter } from './routes/auth.routes';
+import { qrcodeRoutes } from './routes/qrcode.routes';
 
 const app = express();
 
@@ -26,5 +27,6 @@ app.use('/players', playerRouter);
 app.use('/simulators', simulatorRouter);
 app.use('/queue', queueRouter);
 app.use('/timed-queue', timedQueueRouter);
+app.use('/', qrcodeRoutes);
 
 export { app };
