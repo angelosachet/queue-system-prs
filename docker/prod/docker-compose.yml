@@ -1,0 +1,43 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: simqueue_postgres_prod
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: fila_sistema
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    networks:
+      - simqueue-prod
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile
+    container_name: simqueue_api_prod
+    environment:
+      DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/fila_sistema"
+      NODE_ENV: production
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    networks:
+      - simqueue-prod
+    restart: unless-stopped
+    command: sh -c "npx prisma migrate deploy && npm start"
+
+volumes:
+  pgdata_prod:
+
+networks:
+  simqueue-prod:
+    driver: bridge
