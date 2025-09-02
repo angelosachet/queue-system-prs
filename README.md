@@ -8,6 +8,7 @@ A simple queue management system for simulators with timed turns and player mana
 - **Simulator Management** - Manage multiple simulators
 - **Queue System** - Add players to queues, manage positions
 - **Timed Queues** - Automatic turn management with timeouts
+- **Custom Time & Payment** - Set individual turn duration and payment amount per player
 - **Real-time Events** - Event system for queue changes
 
 ## API Endpoints
@@ -27,11 +28,21 @@ A simple queue management system for simulators with timed turns and player mana
 - `DELETE /simulators/:id` - Delete simulator
 
 ### Queue Management
-- `POST /queue` - Add player to queue
+- `POST /queue` - Add player to queue (with optional timeMinutes and amountPaid)
 - `GET /queue` - List all queues
 - `GET /queue/:simulatorId` - Get queue for simulator
 - `DELETE /queue/:queueId` - Remove player from queue
 - `PUT /queue/:queueId/move` - Move player position
+
+#### Add Player to Queue Body:
+```json
+{
+  "playerId": 1,
+  "simulatorId": 1,
+  "timeMinutes": 10,  // Optional: defaults to 5 minutes
+  "amountPaid": 25.50 // Optional: defaults to 0
+}
+```
 
 ### Timed Queue
 - `POST /timed-queue/simulator/:simulatorId/start` - Start timed queue
@@ -39,6 +50,10 @@ A simple queue management system for simulators with timed turns and player mana
 - `POST /timed-queue/simulator/:simulatorId/next` - Process next player
 - `POST /timed-queue/:queueId/confirm` - Confirm player turn
 - `POST /timed-queue/:queueId/missed` - Handle missed confirmation
+
+### QR Code System
+- `GET /sellers/:sellerId/qrcode` - Generate QR code for seller referral
+- `GET /sellers/:sellerId/referrals` - List seller's referrals
 
 ## Queue States
 
@@ -50,8 +65,10 @@ A simple queue management system for simulators with timed turns and player mana
 
 ## Configuration
 
-- **Turn Duration**: 5 minutes
+- **Default Turn Duration**: 5 minutes (customizable per player)
 - **Confirmation Window**: 3 minutes
+- **Custom Time Range**: Any positive number of minutes
+- **Payment Tracking**: Decimal values supported
 
 ## Queue Flow
 
@@ -62,10 +79,28 @@ A simple queue management system for simulators with timed turns and player mana
 
 ## Setup
 
+### Development
 1. Install dependencies: `npm install`
 2. Setup database: `npx prisma migrate dev`
 3. Seed test data: `npm run seed:test` (for test environment)
 4. Start server: `npm run dev` (development) or `npm start` (production)
+
+### Docker Deployment
+
+#### Development
+```bash
+cd docker/dev
+docker-compose up -d
+```
+
+#### Production
+```bash
+export POSTGRES_PASSWORD=your_secure_password
+export JWT_SECRET=your_jwt_secret
+
+cd docker/prod
+docker-compose up -d
+```
 
 Server runs on `http://localhost:3000`
 
