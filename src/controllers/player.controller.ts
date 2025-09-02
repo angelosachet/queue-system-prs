@@ -6,11 +6,11 @@ const service = new PlayerService();
 export class PlayerController {
   async create(req: Request, res: Response) {
     try {
-      const { name, email } = req.body;
+      const { name, email, phone, sellerId } = req.body;
       if (!name) return res.status(400).json({ error: 'Name is required' });
       if (!email) return res.status(400).json({ error: 'Email is required' });
 
-      const player = await service.create(name, email);
+      const player = await service.create(name, email, phone, sellerId);
       return res.status(201).json(player);
     } catch (err: any) {
       if (err.message === 'Email already exists') {
@@ -36,10 +36,10 @@ export class PlayerController {
   async update(req: Request, res: Response) { //update user info, based on id
     try {
       const id = Number(req.params.id);
-      const { name, email } = req.body;
+      const { name, email, phone, sellerId } = req.body;
       if (!name) return res.status(400).json({ error: 'Name is required' });
 
-      const updated = await service.update(id, name, email);
+      const updated = await service.update(id, name, email, phone, sellerId);
       return res.json(updated);
     } catch (err: any) {
       if (err.message === 'Email already exists') {
