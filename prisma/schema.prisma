@@ -111,6 +111,16 @@ model SaleRecord {
   createdAt   DateTime  @default(now())
 }
 
+model TimePattern {
+  id          Int      @id @default(autoincrement())
+  name        String   // ex: "Padrão 1", "Promocional"
+  timeMinutes Int      // tempo em minutos
+  price       Float    // preço
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 enum QueueStatus {
   WAITING
   ACTIVE
