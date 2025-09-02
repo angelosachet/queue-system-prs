@@ -2,7 +2,12 @@ import { PrismaClient } from '@prisma/client';
 import { QueueJob } from '../jobs/queueJob';
 
 // Use global Prisma instance if available, otherwise create new one
-const prisma = (global as any).prisma ?? new PrismaClient();
+let prismaInstance: PrismaClient | null = null;
+const getPrismaClient = () => {
+  if ((global as any).prisma) return (global as any).prisma;
+  if (!prismaInstance) prismaInstance = new PrismaClient();
+  return prismaInstance;
+};
 // Get singleton instance of queue job scheduler
 const queueJob = QueueJob.getInstance();
 
@@ -34,6 +39,7 @@ export class TimedQueueService {
    */
   async processNextInQueue(simulatorId: number) {
     try {
+      const prisma = getPrismaClient();
       // Move current active/confirmed player to end of queue
       const currentActive = await prisma.queue.findFirst({
         where: {
@@ -70,7 +76,7 @@ export class TimedQueueService {
           position: 'asc'
         },
         include: {
-          Player: true
+          User: true
         }
       });
 
@@ -98,7 +104,7 @@ export class TimedQueueService {
       await queueJob.scheduleTurnTimeout(nextPlayer.id, expiresAt);
 
       return {
-        player: nextPlayer.Player,
+        player: nextPlayer.User,
         turnStartAt,
         expiresAt,
         estimatedWaitTime: await this.calculateWaitTime(simulatorId, nextPlayer.position)
@@ -114,9 +120,10 @@ export class TimedQueueService {
    */
   async confirmPlayerTurn(queueId: number) {
     try {
+      const prisma = getPrismaClient();
       const queueEntry = await prisma.queue.findUnique({
         where: { id: queueId },
-        include: { Player: true }
+        include: { User: true }
       });
 
       if (!queueEntry || queueEntry.status !== 'ACTIVE') {
@@ -144,7 +151,7 @@ export class TimedQueueService {
       // Schedule completion and next player processing
       await queueJob.scheduleCompletion(queueId, completionTime);
 
-      return { confirmed: true, player: queueEntry.Player };
+      return { confirmed: true, player: queueEntry.User };
     } catch (error) {
       console.error('Error confirming player turn:', error);
       throw error;
@@ -156,9 +163,10 @@ export class TimedQueueService {
    */
   async handleMissedConfirmation(queueId: number) {
     try {
+      const prisma = getPrismaClient();
       const queueEntry = await prisma.queue.findUnique({
         where: { id: queueId },
-        include: { Player: true }
+        include: { User: true }
       });
 
       if (!queueEntry) {
@@ -177,7 +185,7 @@ export class TimedQueueService {
         }
       });
 
-      return { handled: true, player: queueEntry.Player };
+      return { handled: true, player: queueEntry.User };
     } catch (error) {
       console.error('Error handling missed confirmation:', error);
       throw error;
@@ -189,6 +197,7 @@ export class TimedQueueService {
    */
   async getActiveQueue(simulatorId: number) {
     try {
+      const prisma = getPrismaClient();
       return await prisma.queue.findFirst({
         where: {
           SimulatorId: simulatorId,
@@ -197,7 +206,7 @@ export class TimedQueueService {
           }
         },
         include: {
-          Player: true
+          User: true
         }
       });
     } catch (error) {
@@ -211,6 +220,7 @@ export class TimedQueueService {
    */
   async calculateWaitTime(simulatorId: number, currentPosition: number) {
     try {
+      const prisma = getPrismaClient();
       // Count active/confirmed players
       const activePlayers = await prisma.queue.count({
         where: {
@@ -260,11 +270,12 @@ export class TimedQueueService {
    */
   async getQueueStatus(simulatorId: number) {
     try {
+      const prisma = getPrismaClient();
       const queue = await prisma.queue.findMany({
         where: { SimulatorId: simulatorId },
         orderBy: { position: 'asc' },
         include: {
-          Player: true
+          User: true
         }
       });
 
@@ -288,7 +299,7 @@ export class TimedQueueService {
 
         results.push({
           id: entry.id,
-          player: entry.Player,
+          player: entry.User,
           position: entry.position,
           status: entry.status,
           turnStartAt: entry.turnStartAt,

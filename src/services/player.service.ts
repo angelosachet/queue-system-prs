@@ -1,10 +1,16 @@
 import { PrismaClient, User } from '@prisma/client';
 
 // Use global prisma in tests, otherwise create new instance
-const prisma = (global as any).prisma || new PrismaClient();
+let prismaInstance: PrismaClient | null = null;
+const getPrismaClient = () => {
+  if ((global as any).prisma) return (global as any).prisma;
+  if (!prismaInstance) prismaInstance = new PrismaClient();
+  return prismaInstance;
+};
 
 export class PlayerService {
   async create(name: string, email: string, phone?: string, sellerId?: number): Promise<User> {
+    const prisma = getPrismaClient();
     // Check if email already exists
     const existingUser = await prisma.user.findFirst({
       where: { email }
@@ -27,6 +33,7 @@ export class PlayerService {
   }
 
   async findAll(email?: string): Promise<User[]> {
+    const prisma = getPrismaClient();
     const where = email ? { email, role: 'PLAYER' } : { role: 'PLAYER' };
     return prisma.user.findMany({ 
       where,
@@ -35,12 +42,14 @@ export class PlayerService {
   }
 
   async findById(id: number): Promise<User | null> {
+    const prisma = getPrismaClient();
     return prisma.user.findUnique({ 
       where: { id }
     });
   }
 
   async update(id: number, name: string, email?: string, phone?: string, sellerId?: number): Promise<User> {
+    const prisma = getPrismaClient();
     const updateData: any = { name };
     
     if (email) {
@@ -63,6 +72,7 @@ export class PlayerService {
   }
 
   async delete(id: number): Promise<User> {
+    const prisma = getPrismaClient();
     return prisma.user.delete({ where: { id } });
   }
 }

@@ -1,15 +1,20 @@
 // service/queue.service.ts
-import { Queue, Player, Simulator } from "@prisma/client";
+import { Queue, User, Simulator } from "@prisma/client";
 import { PrismaClient } from "@prisma/client";
 import { eventService } from "./event.service";
 
 declare global {
-  var prisma: PrismaClient | undefined;
+  var prisma: PrismaClient;
 }
 
 // Use global Prisma instance if available, otherwise create new one
-const prismaClient = global.prisma ?? new PrismaClient();
-const prisma = prismaClient;
+let prismaInstance: PrismaClient | null = null;
+const getPrismaClient = () => {
+  if (global.prisma) return global.prisma;
+  if (!prismaInstance) prismaInstance = new PrismaClient();
+  return prismaInstance;
+};
+const prisma = getPrismaClient();
 
 export class QueueService {
   /**
@@ -21,10 +26,11 @@ export class QueueService {
     timeMinutes: number = 5,
     amountPaid: number = 0,
     sellerId?: number
-  ): Promise<Queue & { Player: Player; Simulator: Simulator }> {
+  ): Promise<Queue & { User: User; Simulator: Simulator }> {
     // Validate player and simulator exist in parallel
+    const prismaClient = getPrismaClient();
     const [player, simulator] = await Promise.all([
-      prismaClient.player.findUnique({ where: { id: playerId } }),
+      prismaClient.user.findUnique({ where: { id: playerId, role: 'PLAYER' } }),
       prismaClient.simulator.findUnique({ 
         where: { id: simulatorId },
         include: { Queue: true }
@@ -37,7 +43,7 @@ export class QueueService {
     // Check if player is already in this simulator's queue
     const existingEntry = await prismaClient.queue.findFirst({
       where: {
-        PlayerId: playerId,
+        UserId: playerId,
         SimulatorId: simulatorId
       }
     });
@@ -54,13 +60,13 @@ export class QueueService {
     // Create queue entry at end of queue
     const queueItem = await prismaClient.queue.create({
       data: {
-        PlayerId: playerId,
+        UserId: playerId,
         SimulatorId: simulatorId,
         position: count + 1,
         timeMinutes,
         amountPaid,
       },
-      include: { Player: true, Simulator: true },
+      include: { User: true, Simulator: true },
     });
 
     // Register sale if there's a seller and amount paid
@@ -102,7 +108,7 @@ export class QueueService {
     // Create new queue entry
     return prisma.queue.create({
       data: {
-        PlayerId,
+        UserId: PlayerId,
         SimulatorId,
         position: newPosition,
       },
@@ -112,10 +118,11 @@ export class QueueService {
   /**
    * Retrieves all players in a simulator's queue ordered by position
    */
-  async getQueue(simulatorId: number): Promise<(Queue & { Player: Player })[]> {
+  async getQueue(simulatorId: number): Promise<(Queue & { User: User })[]> {
+    const prismaClient = getPrismaClient();
     return prismaClient.queue.findMany({
       where: { SimulatorId: simulatorId },
-      include: { Player: true },
+      include: { User: true },
       orderBy: { position: "asc" },
     });
   }
@@ -124,6 +131,7 @@ export class QueueService {
    * Removes a player from queue and reorganizes positions
    */
   async removePlayerFromQueue(queueId: number): Promise<void> {
+    const prismaClient = getPrismaClient();
     // Find queue item to remove
     const queueItem = await prismaClient.queue.findUnique({
       where: { id: queueId },
@@ -144,7 +152,7 @@ export class QueueService {
 
     // Emit removal event
     eventService.emit('queue.playerRemoved', {
-      playerId: queueItem.PlayerId,
+      playerId: queueItem.UserId,
       simulatorId,
       position,
       queueId
@@ -156,7 +164,7 @@ export class QueueService {
    */
   async getAllQueues() {
     return prisma.queue.findMany({
-      include: { Player: true, Simulator: true },
+      include: { User: true, Simulator: true },
     });
   }
 
@@ -166,7 +174,8 @@ export class QueueService {
   async movePlayer(
     queueId: number,
     newPosition: number
-  ): Promise<Queue & { Player: Player; Simulator: Simulator }> {
+  ): Promise<Queue & { User: User; Simulator: Simulator }> {
+    const prismaClient = getPrismaClient();
     // Find queue item to move
     const queueItem = await prismaClient.queue.findUnique({
       where: { id: queueId },
@@ -180,7 +189,7 @@ export class QueueService {
     if (newPosition === oldPosition) {
       const updated = await prismaClient.queue.findUnique({
         where: { id: queueId },
-        include: { Player: true, Simulator: true },
+        include: { User: true, Simulator: true },
       });
       if (!updated) throw new Error("Queue item not found after move");
       return updated;
@@ -225,7 +234,7 @@ export class QueueService {
     // Return updated queue item with relations
     const updated = await prismaClient.queue.findUnique({
       where: { id: queueId },
-      include: { Player: true, Simulator: true },
+      include: { User: true, Simulator: true },
     });
     if (!updated) throw new Error("Queue item not found after move");
     return updated;
