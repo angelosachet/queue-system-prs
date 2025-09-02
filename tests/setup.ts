@@ -13,8 +13,8 @@ beforeAll(async () => {
 beforeEach(async () => {
   // Limpa tabelas na ordem correta para não quebrar FKs
   await prisma.queue.deleteMany();
-  await prisma.player.updateMany({ data: { simulatorId: null } });
-  await prisma.player.deleteMany();
+  await prisma.user.updateMany({ data: { simulatorId: null } });
+  await prisma.user.deleteMany();
   await prisma.simulator.deleteMany();
 });
 

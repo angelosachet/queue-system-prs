@@ -5,14 +5,14 @@ import './setup';
 describe('Custom Time and Payment', () => {
   beforeEach(async () => {
     await global.prisma!.queue.deleteMany();
-    await global.prisma!.player.deleteMany();
+    await global.prisma!.user.deleteMany();
     await global.prisma!.simulator.deleteMany();
   });
 
   it('should add player to queue with custom time and payment', async () => {
     // Create simulator and player
     const simulator = await global.prisma!.simulator.create({ data: { name: 'Test Sim' } });
-    const player = await global.prisma!.player.create({ data: { name: 'Test Player', email: 'test@test.com' } });
+    const player = await global.prisma!.user.create({ data: { name: 'Test Player', email: 'test@test.com', password: 'temp', role: 'PLAYER' } });
 
     // Add player to queue with custom time and payment
     const res = await request(app)
@@ -32,7 +32,7 @@ describe('Custom Time and Payment', () => {
   it('should use default values when not provided', async () => {
     // Create simulator and player
     const simulator = await global.prisma!.simulator.create({ data: { name: 'Test Sim' } });
-    const player = await global.prisma!.player.create({ data: { name: 'Test Player', email: 'test@test.com' } });
+    const player = await global.prisma!.user.create({ data: { name: 'Test Player', email: 'test@test.com', password: 'temp', role: 'PLAYER' } });
 
     // Add player to queue without custom values
     const res = await request(app)
@@ -49,7 +49,7 @@ describe('Custom Time and Payment', () => {
 
   it('should prevent duplicate players in same queue', async () => {
     const simulator = await global.prisma!.simulator.create({ data: { name: 'Test Sim' } });
-    const player = await global.prisma!.player.create({ data: { name: 'Test Player', email: 'test@test.com' } });
+    const player = await global.prisma!.user.create({ data: { name: 'Test Player', email: 'test@test.com', password: 'temp', role: 'PLAYER' } });
 
     // First addition - should succeed
     const res1 = await request(app).post('/queue').send({

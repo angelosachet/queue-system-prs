@@ -33,18 +33,22 @@ describe('Timed Queue System', () => {
       }
     });
     simulatorId = simulator.id;
-    const player1 = await prisma.player.create({
+    const player1 = await prisma.user.create({
       data: {
         name: 'Test Player 1',
         email: 'testplayer1@mail.com',
+        password: 'temp',
+        role: 'PLAYER',
         inQueue: true
       }
     });
     player1Id = player1.id;
-    const player2 = await prisma.player.create({
+    const player2 = await prisma.user.create({
       data: {
         name: 'Test Player 2',
         email:"testplayer@mail.com",
+        password: 'temp',
+        role: 'PLAYER',
         inQueue: true
       }
     });
@@ -52,7 +56,7 @@ describe('Timed Queue System', () => {
     // Add players to queue
     await prisma.queue.create({
       data: {
-        PlayerId: player1Id,
+        UserId: player1Id,
         SimulatorId: simulatorId,
         position: 1,
         status: 'WAITING'
@@ -60,7 +64,7 @@ describe('Timed Queue System', () => {
     });
     await prisma.queue.create({
       data: {
-        PlayerId: player2Id,
+        UserId: player2Id,
         SimulatorId: simulatorId,
         position: 2,
         status: 'WAITING'
@@ -72,7 +76,7 @@ describe('Timed Queue System', () => {
     await prisma.queue.deleteMany({
       where: { SimulatorId: simulatorId }
     });
-    await prisma.player.deleteMany({
+    await prisma.user.deleteMany({
       where: { id: { in: [player1Id, player2Id] } }
     });
     await prisma.simulator.delete({
@@ -118,17 +122,19 @@ describe('Timed Queue System', () => {
 
   it('should re-queue player on missed confirmation', async () => {
     // Create a new player for this test
-    const player3 = await prisma.player.create({
+    const player3 = await prisma.user.create({
       data: {
         name: 'Test Player 3',
         email: 'testplayer3@mail.com',
+        password: 'temp',
+        role: 'PLAYER',
         inQueue: true
       }
     });
 
     const queueEntry = await prisma.queue.create({
       data: {
-        PlayerId: player3.id,
+        UserId: player3.id,
         SimulatorId: simulatorId, // Use the existing simulator
         position: 3,
         status: 'ACTIVE',
@@ -148,7 +154,7 @@ describe('Timed Queue System', () => {
 
     // Cleanup
     await prisma.queue.delete({ where: { id: queueEntry.id } });
-    await prisma.player.delete({ where: { id: player3.id } });
+    await prisma.user.delete({ where: { id: player3.id } });
   });
 
   it('should calculate estimated wait time', async () => {

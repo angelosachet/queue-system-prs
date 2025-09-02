@@ -4,7 +4,7 @@ import { app } from '../src/app';
 describe('Queue CRUD', () => {
   beforeEach(async () => {
     await global.prisma.queue.deleteMany();
-    await global.prisma.player.deleteMany();
+    await global.prisma.user.deleteMany();
     await global.prisma.simulator.deleteMany();
   });
 
@@ -14,8 +14,8 @@ describe('Queue CRUD', () => {
 
   it('should add players to queue', async () => {
     const simulator = await global.prisma.simulator.create({ data: { name: 'Sim1' } });
-    const player1 = await global.prisma.player.create({ data: { name: 'Player1', email: 'player1@test.com' } });
-    const player2 = await global.prisma.player.create({ data: { name: 'Player2', email: 'player2@test.com' } });
+    const player1 = await global.prisma.user.create({ data: { name: 'Player1', email: 'player1@test.com', password: 'temp', role: 'PLAYER' } });
+    const player2 = await global.prisma.user.create({ data: { name: 'Player2', email: 'player2@test.com', password: 'temp', role: 'PLAYER' } });
 
     const res1 = await request(app).post('/queue').send({ playerId: player1.id, simulatorId: simulator.id });
     const res2 = await request(app).post('/queue').send({ playerId: player2.id, simulatorId: simulator.id });
@@ -28,21 +28,21 @@ describe('Queue CRUD', () => {
 
   it('should list the queue', async () => {
     const simulator = await global.prisma.simulator.create({ data: { name: 'Sim2' } });
-    const player = await global.prisma.player.create({ data: { name: 'Player3', email: 'player3@test.com' } });
+    const player = await global.prisma.user.create({ data: { name: 'Player3', email: 'player3@test.com', password: 'temp', role: 'PLAYER' } });
 
-    await global.prisma.queue.create({ data: { PlayerId: player.id, SimulatorId: simulator.id, position: 1 } });
+    await global.prisma.queue.create({ data: { UserId: player.id, SimulatorId: simulator.id, position: 1 } });
 
     const res = await request(app).get(`/queue/${simulator.id}`);
     expect(res.status).toBe(200);
     expect(res.body.length).toBe(1);
-    expect(res.body[0].Player.name).toBe('Player3');
+    expect(res.body[0].User.name).toBe('Player3');
   });
 
   it('should remove a player from the queue', async () => {
     const simulator = await global.prisma.simulator.create({ data: { name: 'Sim3' } });
-    const player = await global.prisma.player.create({ data: { name: 'Player4', email: 'player4@test.com' } });
+    const player = await global.prisma.user.create({ data: { name: 'Player4', email: 'player4@test.com', password: 'temp', role: 'PLAYER' } });
 
-    const queueItem = await global.prisma.queue.create({ data: { PlayerId: player.id, SimulatorId: simulator.id, position: 1 } });
+    const queueItem = await global.prisma.queue.create({ data: { UserId: player.id, SimulatorId: simulator.id, position: 1 } });
 
     const res = await request(app).delete(`/queue/${queueItem.id}`);
     expect(res.status).toBe(204);
@@ -50,11 +50,11 @@ describe('Queue CRUD', () => {
 
   it('should move a player within the queue', async () => {
     const simulator = await global.prisma.simulator.create({ data: { name: 'Sim4' } });
-    const p1 = await global.prisma.player.create({ data: { name: 'P1', email: 'p1@test.com' } });
-    const p2 = await global.prisma.player.create({ data: { name: 'P2', email: 'p2@test.com' } });
+    const p1 = await global.prisma.user.create({ data: { name: 'P1', email: 'p1@test.com', password: 'temp', role: 'PLAYER' } });
+    const p2 = await global.prisma.user.create({ data: { name: 'P2', email: 'p2@test.com', password: 'temp', role: 'PLAYER' } });
 
-    const q1 = await global.prisma.queue.create({ data: { PlayerId: p1.id, SimulatorId: simulator.id, position: 1 } });
-    const q2 = await global.prisma.queue.create({ data: { PlayerId: p2.id, SimulatorId: simulator.id, position: 2 } });
+    const q1 = await global.prisma.queue.create({ data: { UserId: p1.id, SimulatorId: simulator.id, position: 1 } });
+    const q2 = await global.prisma.queue.create({ data: { UserId: p2.id, SimulatorId: simulator.id, position: 2 } });
 
     const res = await request(app).put(`/queue/${q2.id}/move`).send({ newPosition: 1 });
     expect(res.status).toBe(200);
