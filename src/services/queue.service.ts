@@ -3,6 +3,10 @@ import { Queue, Player, Simulator } from "@prisma/client";
 import { PrismaClient } from "@prisma/client";
 import { eventService } from "./event.service";
 
+declare global {
+  var prisma: PrismaClient | undefined;
+}
+
 // Use global Prisma instance if available, otherwise create new one
 const prismaClient = global.prisma ?? new PrismaClient();
 const prisma = prismaClient;
@@ -13,7 +17,10 @@ export class QueueService {
    */
   async addPlayerToQueue(
     playerId: number,
-    simulatorId: number
+    simulatorId: number,
+    timeMinutes: number = 5,
+    amountPaid: number = 0,
+    sellerId?: number
   ): Promise<Queue & { Player: Player; Simulator: Simulator }> {
     // Validate player and simulator exist in parallel
     const [player, simulator] = await Promise.all([
@@ -27,6 +34,18 @@ export class QueueService {
     if (!player) throw new Error("Player not found");
     if (!simulator) throw new Error("Simulator not found");
 
+    // Check if player is already in this simulator's queue
+    const existingEntry = await prismaClient.queue.findFirst({
+      where: {
+        PlayerId: playerId,
+        SimulatorId: simulatorId
+      }
+    });
+    
+    if (existingEntry) {
+      throw new Error("Player is already in this queue");
+    }
+
     // Get current queue size to determine new position
     const count = await prismaClient.queue.count({
       where: { SimulatorId: simulatorId },
@@ -38,9 +57,23 @@ export class QueueService {
         PlayerId: playerId,
         SimulatorId: simulatorId,
         position: count + 1,
+        timeMinutes,
+        amountPaid,
       },
       include: { Player: true, Simulator: true },
     });
+
+    // Register sale if there's a seller and amount paid
+    if (sellerId && amountPaid > 0) {
+      await prismaClient.saleRecord.create({
+        data: {
+          sellerId,
+          playerId,
+          simulatorId,
+          amountPaid,
+        },
+      });
+    }
 
     // Emit event for queue addition
     eventService.emit('queue.playerAdded', {
