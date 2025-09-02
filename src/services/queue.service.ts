@@ -2,6 +2,7 @@
 import { Queue, User, Simulator } from "@prisma/client";
 import { PrismaClient } from "@prisma/client";
 import { eventService } from "./event.service";
+import { TimedQueueService } from "./timedQueue.service";
 
 declare global {
   var prisma: PrismaClient;
@@ -80,6 +81,9 @@ export class QueueService {
         },
       });
     }
+
+    // Auto-start timed queue if not already active
+    await this.autoStartTimedQueue(simulatorId);
 
     // Emit event for queue addition
     eventService.emit('queue.playerAdded', {
@@ -238,5 +242,41 @@ export class QueueService {
     });
     if (!updated) throw new Error("Queue item not found after move");
     return updated;
+  }
+
+  /**
+   * Automatically starts timed queue if not already active and there are players waiting
+   */
+  private async autoStartTimedQueue(simulatorId: number): Promise<void> {
+    try {
+      const prismaClient = getPrismaClient();
+      
+      // Check if there's already an active or confirmed player in this simulator's queue
+      const activePlayer = await prismaClient.queue.findFirst({
+        where: {
+          SimulatorId: simulatorId,
+          status: { in: ['ACTIVE', 'CONFIRMED'] }
+        }
+      });
+
+      // If no active player, check if there are waiting players
+      if (!activePlayer) {
+        const waitingPlayers = await prismaClient.queue.count({
+          where: {
+            SimulatorId: simulatorId,
+            status: 'WAITING'
+          }
+        });
+
+        // If there are waiting players, start the timed queue
+        if (waitingPlayers > 0) {
+          const timedQueueService = new TimedQueueService();
+          await timedQueueService.processNextInQueue(simulatorId);
+        }
+      }
+    } catch (error) {
+      // Log error but don't throw - queue addition should still succeed
+      console.error('Error auto-starting timed queue:', error);
+    }
   }
 }
