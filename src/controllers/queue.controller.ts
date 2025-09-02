@@ -7,13 +7,16 @@ export class QueueController {
   // Adiciona jogador à fila
   async addPlayer(req: Request, res: Response) { 
     try {
-      const { playerId, simulatorId } = req.body;
+      const { playerId, simulatorId, timeMinutes = 5, amountPaid = 0, sellerId } = req.body;
       if (!playerId || !simulatorId)
         return res.status(400).json({ error: 'Player ID and Simulator ID are required' });
 
       const queue = await service.addPlayerToQueue(
         Number(playerId),   // add a player to a specif simulator queue
-        Number(simulatorId)
+        Number(simulatorId),
+        Number(timeMinutes),
+        Number(amountPaid),
+        sellerId ? Number(sellerId) : undefined
       );
       
       return res.status(201).json({
@@ -21,7 +24,8 @@ export class QueueController {
         message: `Player ${playerId} added to simulator ${simulatorId}'s queue`
       });
     } catch (err: any) {
-      const status = err.message.includes('not found') ? 404 : 500;
+      const status = err.message.includes('already in this queue') ? 409 : 
+                     err.message.includes('not found') ? 404 : 500;
       return res.status(status).json({ error: err.message });
     }
   }
