@@ -2,7 +2,12 @@ import { Request, Response } from 'express';
 import QRCode from 'qrcode';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = (global as any).prisma ?? new PrismaClient();
+let prismaInstance: PrismaClient | null = null;
+const getPrismaClient = () => {
+  if ((global as any).prisma) return (global as any).prisma;
+  if (!prismaInstance) prismaInstance = new PrismaClient();
+  return prismaInstance;
+};
 
 export class QRCodeController {
   async generateSellerQRCode(req: Request, res: Response) {
@@ -13,6 +18,7 @@ export class QRCodeController {
         return res.status(400).json({ error: 'Invalid seller ID' });
       }
 
+      const prisma = getPrismaClient();
       // Validar se seller existe
       const seller = await prisma.user.findUnique({
         where: { id: sellerId, role: 'SELLER' }
@@ -55,6 +61,7 @@ export class QRCodeController {
         return res.status(400).json({ error: 'Invalid seller ID' });
       }
 
+      const prisma = getPrismaClient();
       const referrals = await prisma.user.findMany({
         where: { sellerId },
         select: {
