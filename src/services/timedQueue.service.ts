@@ -126,9 +126,10 @@ export class TimedQueueService {
       // Cancel the missed turn timeout
       await queueJob.cancelJob(queueId);
 
-      // Mark turn as confirmed and start actual turn timer
+      // Mark turn as confirmed and start actual turn timer using player's custom time
       const now = new Date();
-      const completionTime = new Date(now.getTime() + this.TURN_DURATION);
+      const playerTurnDuration = queueEntry.timeMinutes * 60 * 1000; // Convert minutes to milliseconds
+      const completionTime = new Date(now.getTime() + playerTurnDuration);
       
       await prisma.queue.update({
         where: { id: queueId },
@@ -231,9 +232,23 @@ export class TimedQueueService {
         }
       });
 
-      // Calculate total wait time based on players ahead
-      const totalAhead = activePlayers + waitingPlayers;
-      return totalAhead * this.TURN_DURATION;
+      // Calculate total wait time based on players ahead and their custom times
+      const playersAhead = await prisma.queue.findMany({
+        where: {
+          SimulatorId: simulatorId,
+          OR: [
+            { status: { in: ['ACTIVE', 'CONFIRMED'] } },
+            { status: 'WAITING', position: { lt: currentPosition } }
+          ]
+        },
+        select: { timeMinutes: true }
+      });
+      
+      const totalWaitTime = playersAhead.reduce((total: number, player: { timeMinutes: number }) => {
+        return total + (player.timeMinutes * 60 * 1000); // Convert to milliseconds
+      }, 0);
+      
+      return totalWaitTime;
     } catch (error) {
       console.error('Error calculating wait time:', error);
       return 0;
@@ -266,7 +281,8 @@ export class TimedQueueService {
         if (entry.status === 'ACTIVE' && entry.expiresAt) {
           timeLeft = Math.max(0, entry.expiresAt.getTime() - now.getTime());
         } else if (entry.status === 'CONFIRMED' && entry.confirmedAt) {
-          const completionTime = new Date(entry.confirmedAt.getTime() + this.TURN_DURATION);
+          const playerTurnDuration = entry.timeMinutes * 60 * 1000;
+          const completionTime = new Date(entry.confirmedAt.getTime() + playerTurnDuration);
           timeLeft = Math.max(0, completionTime.getTime() - now.getTime());
         }
 
@@ -280,7 +296,9 @@ export class TimedQueueService {
           confirmedAt: entry.confirmedAt,
           missedTurns: entry.missedTurns,
           estimatedWaitTime,
-          timeLeft
+          timeLeft,
+          timeMinutes: entry.timeMinutes,
+          amountPaid: entry.amountPaid
         });
       }
 
