@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL_TEST")
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -31,6 +31,9 @@ model User {
 
   // Queue relation
   Queues Queue[]
+  
+  // Sale records relation
+  SaleRecords SaleRecord[] @relation("SaleRecords")
 }
 
 model Player {
@@ -46,6 +49,7 @@ model Player {
   simulator   Simulator? @relation(fields: [simulatorId], references: [id])
 
   Queues      Queue[]
+  SaleRecords SaleRecord[]
 }
 
 model Simulator {
@@ -53,9 +57,10 @@ model Simulator {
   name      String
   active    Boolean    @default(true)
 
-  Users     User[]     // usuários associados ao simulador
-  Players   Player[]   // players associados ao simulador
-  Queue     Queue[]    // fila associada ao simulador
+  Users       User[]       // usuários associados ao simulador
+  Players     Player[]     // players associados ao simulador
+  Queue       Queue[]      // fila associada ao simulador
+  SaleRecords SaleRecord[] // registros de venda do simulador
 }
 
 model Queue {
@@ -81,6 +86,10 @@ model Queue {
   // For re-queue tracking
   missedTurns Int        @default(0)
   totalWaitTime Int      @default(0) // in seconds
+  
+  // Time and payment fields
+  timeMinutes Int        @default(5) // tempo selecionado em minutos
+  amountPaid  Float      @default(0) // valor pago pelo usuário
 }
 
 enum UserRole {
@@ -88,6 +97,18 @@ enum UserRole {
   ADMIN
   SELLER
   PLAYER
+}
+
+model SaleRecord {
+  id          Int       @id @default(autoincrement())
+  sellerId    Int
+  seller      User      @relation("SaleRecords", fields: [sellerId], references: [id])
+  playerId    Int
+  player      Player    @relation(fields: [playerId], references: [id])
+  simulatorId Int
+  simulator   Simulator @relation(fields: [simulatorId], references: [id])
+  amountPaid  Float
+  createdAt   DateTime  @default(now())
 }
 
 enum QueueStatus {

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "public"."Queue" ADD COLUMN     "amountPaid" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "timeMinutes" INTEGER NOT NULL DEFAULT 5;
