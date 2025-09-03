@@ -1,4 +1,5 @@
 import { PrismaClient, User } from '@prisma/client';
+import { eventService } from './event.service';
 
 // Use global prisma in tests, otherwise create new instance
 let prismaInstance: PrismaClient | null = null;
@@ -20,7 +21,7 @@ export class PlayerService {
       throw new Error('Email already exists');
     }
     
-    return prisma.user.create({ 
+    const user = await prisma.user.create({ 
       data: { 
         name, 
         email, 
@@ -30,6 +31,15 @@ export class PlayerService {
         role: 'PLAYER'
       } 
     });
+
+    // Emit event for player creation
+    eventService.emit('player.created', {
+      playerId: user.id,
+      playerName: user.name,
+      sellerId
+    });
+
+    return user;
   }
 
   async findAll(email?: string): Promise<User[]> {
@@ -68,7 +78,15 @@ export class PlayerService {
     if (phone !== undefined) updateData.phone = phone;
     if (sellerId !== undefined) updateData.sellerId = sellerId;
     
-    return prisma.user.update({ where: { id }, data: updateData });
+    const updatedUser = await prisma.user.update({ where: { id }, data: updateData });
+
+    // Emit event for player update
+    eventService.emit('player.updated', {
+      playerId: id,
+      playerName: updatedUser.name
+    });
+
+    return updatedUser;
   }
 
   async delete(id: number): Promise<User> {
