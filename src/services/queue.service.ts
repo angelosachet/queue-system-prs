@@ -127,7 +127,7 @@ export class QueueService {
     return prismaClient.queue.findMany({
       where: { SimulatorId: simulatorId },
       include: { User: true },
-      orderBy: { position: "asc" },
+      orderBy: [{ status: 'asc' }, { position: 'asc' }],
     });
   }
 
@@ -173,18 +173,24 @@ export class QueueService {
   }
 
   /**
-   * Moves a player to a new position in the queue
+   * Moves a player to a new position by swapping with target player (WAITING players only)
    */
   async movePlayer(
     queueId: number,
     newPosition: number
   ): Promise<Queue & { User: User; Simulator: Simulator }> {
     const prismaClient = getPrismaClient();
+    
     // Find queue item to move
     const queueItem = await prismaClient.queue.findUnique({
       where: { id: queueId },
     });
     if (!queueItem) throw new Error("Queue item not found");
+    
+    // Only allow moving WAITING players
+    if (queueItem.status !== 'WAITING') {
+      throw new Error("Can only move players with WAITING status");
+    }
 
     const simulatorId = queueItem.SimulatorId;
     const oldPosition = queueItem.position;
@@ -199,49 +205,75 @@ export class QueueService {
       return updated;
     }
 
-    // Moving up in queue (lower position number)
-    if (newPosition < oldPosition) {
-      await prismaClient.$transaction([
-        // Shift players down between new and old position
-        prismaClient.queue.updateMany({
-          where: {
-            SimulatorId: simulatorId,
-            position: { gte: newPosition, lt: oldPosition },
-          },
-          data: { position: { increment: 1 } },
-        }),
-        // Move player to new position
-        prismaClient.queue.update({
-          where: { id: queueId },
-          data: { position: newPosition },
-        }),
-      ]);
-    } else {
-      // Moving down in queue (higher position number)
-      await prismaClient.$transaction([
-        // Shift players up between old and new position
-        prismaClient.queue.updateMany({
-          where: {
-            SimulatorId: simulatorId,
-            position: { lte: newPosition, gt: oldPosition },
-          },
-          data: { position: { decrement: 1 } },
-        }),
-        // Move player to new position
-        prismaClient.queue.update({
-          where: { id: queueId },
-          data: { position: newPosition },
-        }),
-      ]);
+    // Find target player at new position
+    const targetPlayer = await prismaClient.queue.findFirst({
+      where: {
+        SimulatorId: simulatorId,
+        position: newPosition,
+        status: 'WAITING'
+      }
+    });
+
+    if (!targetPlayer) {
+      throw new Error("No WAITING player found at target position");
     }
 
-    // Return updated queue item with relations
+    // Swap positions
+    await prismaClient.$transaction([
+      prismaClient.queue.update({
+        where: { id: queueId },
+        data: { position: newPosition },
+      }),
+      prismaClient.queue.update({
+        where: { id: targetPlayer.id },
+        data: { position: oldPosition },
+      }),
+    ]);
+
+    // Normalize positions after swap
+    await this.normalizeWaitingPositions(simulatorId);
+
+    // Return updated queue item
     const updated = await prismaClient.queue.findUnique({
       where: { id: queueId },
       include: { User: true, Simulator: true },
     });
     if (!updated) throw new Error("Queue item not found after move");
+    
+    // Emit event for queue movement
+    eventService.emit('queue.playerMoved', {
+      playerId: updated.UserId,
+      simulatorId: updated.SimulatorId,
+      oldPosition,
+      newPosition: updated.position, // Use normalized position
+      queueId: updated.id
+    });
+    
     return updated;
+  }
+
+  /**
+   * Normalizes positions for WAITING players to be consecutive starting from 1
+   */
+  async normalizeWaitingPositions(simulatorId: number): Promise<void> {
+    const prismaClient = getPrismaClient();
+    
+    // Get all WAITING players ordered by current position
+    const waitingPlayers = await prismaClient.queue.findMany({
+      where: {
+        SimulatorId: simulatorId,
+        status: 'WAITING'
+      },
+      orderBy: { position: 'asc' }
+    });
+
+    // Update positions to be consecutive starting from 1
+    for (let i = 0; i < waitingPlayers.length; i++) {
+      await prismaClient.queue.update({
+        where: { id: waitingPlayers[i].id },
+        data: { position: i + 1 }
+      });
+    }
   }
 
   /**
@@ -250,6 +282,9 @@ export class QueueService {
   private async autoStartTimedQueue(simulatorId: number): Promise<void> {
     try {
       const prismaClient = getPrismaClient();
+      
+      // Normalize positions first
+      await this.normalizeWaitingPositions(simulatorId);
       
       // Check if there's already an active or confirmed player in this simulator's queue
       const activePlayer = await prismaClient.queue.findFirst({
