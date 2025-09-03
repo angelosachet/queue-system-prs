@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { QueueJob } from '../jobs/queueJob';
+import { eventService } from './event.service';
 
 // Use global Prisma instance if available, otherwise create new one
 let prismaInstance: PrismaClient | null = null;
@@ -103,6 +104,15 @@ export class TimedQueueService {
       // Schedule timeout for missed confirmation
       await queueJob.scheduleTurnTimeout(nextPlayer.id, expiresAt);
 
+      // Emit event for player activation
+      eventService.emit('timedQueue.playerActivated', {
+        simulatorId,
+        playerId: nextPlayer.UserId,
+        queueId: nextPlayer.id,
+        turnStartAt,
+        expiresAt
+      });
+
       return {
         player: nextPlayer.User,
         turnStartAt,
@@ -150,6 +160,15 @@ export class TimedQueueService {
 
       // Schedule completion and next player processing
       await queueJob.scheduleCompletion(queueId, completionTime);
+
+      // Emit event for player confirmation
+      eventService.emit('timedQueue.playerConfirmed', {
+        simulatorId: queueEntry.SimulatorId,
+        playerId: queueEntry.UserId,
+        queueId,
+        confirmedAt: now,
+        completionTime
+      });
 
       return { confirmed: true, player: queueEntry.User };
     } catch (error) {
