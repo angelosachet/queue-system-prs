@@ -35,6 +35,9 @@ model User {
   // Sale records relation
   SellerSales SaleRecord[] @relation("SellerSales")
   PlayerSales SaleRecord[] @relation("PlayerSales")
+  
+  // AC Session relation
+  ACSessions ACSession[] @relation("PlayerACSessions")
 }
 
 model Player {
@@ -56,11 +59,13 @@ model Simulator {
   id        Int        @id @default(autoincrement())
   name      String
   active    Boolean    @default(true)
+  pcIp      String?    // PC IP address for AC Launcher integration
 
   Users       User[]       // usuários associados ao simulador
   Players     Player[]     // players associados ao simulador
   Queue       Queue[]      // fila associada ao simulador
   SaleRecords SaleRecord[] // registros de venda do simulador
+  ACSessions  ACSession[]  // AC Launcher sessions
 }
 
 model Queue {
@@ -90,6 +95,9 @@ model Queue {
   // Time and payment fields
   timeMinutes Int        @default(5) // tempo selecionado em minutos
   amountPaid  Float      @default(0) // valor pago pelo usuário
+  
+  // AC Session relation
+  ACSessions ACSession[]
 }
 
 enum UserRole {
@@ -127,4 +135,27 @@ enum QueueStatus {
   CONFIRMED
   MISSED
   COMPLETED
+}
+
+enum ACSessionStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  FAILED
+}
+
+model ACSession {
+  id            Int             @id @default(autoincrement())
+  queueId       Int?
+  queue         Queue?          @relation(fields: [queueId], references: [id])
+  playerId      Int?
+  player        User?           @relation("PlayerACSessions", fields: [playerId], references: [id])
+  simulatorId   Int
+  simulator     Simulator       @relation(fields: [simulatorId], references: [id])
+  pcIp          String
+  sessionStatus ACSessionStatus @default(PENDING)
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 }
