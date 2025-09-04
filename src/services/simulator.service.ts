@@ -12,10 +12,10 @@ export class SimulatorService {
   /**
    * Creates a new simulator
    */
-  async createSimulator(name: string): Promise<Simulator> {
+  async createSimulator(name: string, pcIp?: string): Promise<Simulator> {
     const prisma = getPrismaClient();
     return prisma.simulator.create({
-      data: { name },
+      data: { name, pcIp },
       include: {
         Queue: true
       }
@@ -58,17 +58,22 @@ export class SimulatorService {
   }
 
   /**
-   * Updates simulator name and/or active status
+   * Updates simulator name, active status, and/or PC IP
    */
   async updateSimulator(
     id: number,
     name: string,
-    active?: boolean
+    active?: boolean,
+    pcIp?: string
   ): Promise<Simulator> {
     const prisma = getPrismaClient();
+    const updateData: any = { name };
+    if (active !== undefined) updateData.active = active;
+    if (pcIp !== undefined) updateData.pcIp = pcIp;
+    
     return prisma.simulator.update({
       where: { id },
-      data: { name, active },
+      data: updateData,
     });
   }
 
