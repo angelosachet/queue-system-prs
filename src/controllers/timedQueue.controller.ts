@@ -70,7 +70,8 @@ export class TimedQueueController { //starts the timer in specific queue
   async confirmTurn(req: Request, res: Response) {
     try {//confirms a player turn
       const queueId = parseInt(req.params.queueId);
-      const result = await this.timedQueueService.confirmPlayerTurn(queueId);
+      const { acSessionData } = req.body || {};
+      const result = await this.timedQueueService.confirmPlayerTurn(queueId, acSessionData);
       
       res.json({
         success: true,
