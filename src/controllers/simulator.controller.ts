@@ -6,10 +6,10 @@ const service = new SimulatorService();
 export class SimulatorController {
   async create(req: Request, res: Response) { //create a sim
     try {
-      const { name } = req.body;
+      const { name, pcIp } = req.body;
       if (!name) return res.status(400).json({ error: 'Name is required' });
 
-      const simulator = await service.createSimulator(name);
+      const simulator = await service.createSimulator(name, pcIp);
       return res.status(201).json({
         ...simulator,
         message: 'Simulator created with empty queue'
@@ -43,8 +43,8 @@ export class SimulatorController {
   async update(req: Request, res: Response) { //update sim info based on id
     try {
       const id = Number(req.params.id);
-      const { name, active } = req.body;
-      const simulator = await service.updateSimulator(id, name, active);
+      const { name, active, pcIp } = req.body;
+      const simulator = await service.updateSimulator(id, name, active, pcIp);
       return res.json(simulator);
     } catch (err: any) {
       return res.status(400).json({ error: err.message });

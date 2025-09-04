@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { QueueJob } from '../jobs/queueJob';
 import { eventService } from './event.service';
+import { ACSessionService, ACSessionData } from './acSession.service';
 
 // Use global Prisma instance if available, otherwise create new one
 let prismaInstance: PrismaClient | null = null;
@@ -16,6 +17,7 @@ export class TimedQueueService {
   // Time constants for queue management
   private TURN_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
   private CONFIRMATION_WINDOW = 3 * 60 * 1000; // 3 minutes in milliseconds
+  private acSessionService = new ACSessionService();
 
   /**
    * Starts the timed queue system for a simulator
@@ -128,12 +130,12 @@ export class TimedQueueService {
   /**
    * Confirms a player's turn and schedules completion
    */
-  async confirmPlayerTurn(queueId: number) {
+  async confirmPlayerTurn(queueId: number, acSessionData?: ACSessionData) {
     try {
       const prisma = getPrismaClient();
       const queueEntry = await prisma.queue.findUnique({
         where: { id: queueId },
-        include: { User: true }
+        include: { User: true, Simulator: true }
       });
 
       if (!queueEntry || queueEntry.status !== 'ACTIVE') {
@@ -158,6 +160,23 @@ export class TimedQueueService {
         }
       });
 
+      // Create AC session if AC Launcher data is provided
+      let acSession = null;
+      if (acSessionData && queueEntry.Simulator?.pcIp) {
+        try {
+          acSession = await this.acSessionService.createACSession({
+            queueId,
+            playerId: queueEntry.UserId,
+            simulatorId: queueEntry.SimulatorId,
+            pcIp: queueEntry.Simulator.pcIp,
+            sessionStatus: 'ACTIVE'
+          });
+        } catch (acError) {
+          console.error('Error creating AC session:', acError);
+          // Don't fail the confirmation if AC session creation fails
+        }
+      }
+
       // Schedule completion and next player processing
       await queueJob.scheduleCompletion(queueId, completionTime);
 
@@ -167,10 +186,11 @@ export class TimedQueueService {
         playerId: queueEntry.UserId,
         queueId,
         confirmedAt: now,
-        completionTime
+        completionTime,
+        acSession
       });
 
-      return { confirmed: true, player: queueEntry.User };
+      return { confirmed: true, player: queueEntry.User, acSession };
     } catch (error) {
       console.error('Error confirming player turn:', error);
       throw error;

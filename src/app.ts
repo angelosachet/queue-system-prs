@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 
 import { playerRouter } from './routes/player.routes';
 import { simulatorRouter } from './routes/simulator.routes';
@@ -8,6 +9,8 @@ import { timedQueueRouter } from './routes/timed-queue.routes';
 import { authRouter } from './routes/auth.routes';
 import { qrcodeRoutes } from './routes/qrcode.routes';
 import { timePatternRouter } from './routes/timePattern.routes';
+import { acLauncherRouter } from './routes/ac-launcher.routes';
+import { sessionManagementService } from './services/sessionManagement.service';
 
 const app = express();
 
@@ -21,6 +24,12 @@ app.use(cors());
 
 app.use(express.json());
 
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Initialize session management service
+sessionManagementService.initializeConnections().catch(console.error);
+
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 app.use('/auth', authRouter);
@@ -29,6 +38,7 @@ app.use('/simulators', simulatorRouter);
 app.use('/queue', queueRouter);
 app.use('/timed-queue', timedQueueRouter);
 app.use('/time-patterns', timePatternRouter);
+app.use('/ac-launcher', acLauncherRouter);
 app.use('/', qrcodeRoutes);
 
 export { app };
