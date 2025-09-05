@@ -30,7 +30,7 @@ export class QRCodeController {
       
       // Gerar URL do WhatsApp com referência
       const whatsappNumber = process.env.WHATSAPP_NUMBER || '554884549312';
-      const registerUrl = `https://wa.me/${whatsappNumber}?text=PRS%28${sellerId}%29`;
+      const registerUrl = `https://wa.me/${whatsappNumber}?text=Ol%C3%A1!%20Gostaria%20de%20participar%20da%20simula%C3%A7%C3%A3o.%20C%C3%B3digo%3A%20PRS%28${sellerId}%29`;
       
       // Gerar QR Code
       const qrCodeDataUrl = await QRCode.toDataURL(registerUrl, {
